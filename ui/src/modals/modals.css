@@ -1,0 +1,130 @@
+/* composer */
+#composer {
+  #file-input {
+    opacity: 0;
+  }
+}
+
+/* login */
+#phrase-input {
+  & textarea {
+    width: 400px;
+    height: 200px;
+    resize: none;
+    outline: none;
+    display: block;
+    margin: 1rem auto;
+  }
+
+  & .buttons {
+    width: 50%;
+    margin: auto;
+  }
+}
+
+#confirm-login {
+  img {
+    width: 80px;
+    margin-right: 1rem;
+  }
+
+  & .profile {
+    margin: 1rem auto;
+    border: 1px solid var(--border-color);
+
+    #names {
+      display: flex;
+      gap: 0.25rem;
+    }
+  }
+}
+
+.buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+
+  & button {
+    display: block;
+  }
+}
+
+#modal-fg {
+  .spinner {
+    width: 50px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* composer */
+#composer {
+  #row1 {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  & textarea {
+    outline: none;
+    border: none;
+    font-size: 1.1rem;
+    resize: none;
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+
+  #composer-avatar {
+    width: 50px;
+  }
+
+  #button-row {
+    border-top: 1px solid grey;
+  }
+}
+
+/* login */
+#edit-profile {
+  & input {
+    border: none;
+    display: block;
+    margin: 0.5rem;
+    font-size: 1.2rem;
+  }
+
+  & .profile.card {
+    margin: 0 auto;
+
+    & img {
+      border: 1px solid var(--fg);
+      width: 80px;
+      height: 80px;
+    }
+  }
+}
+
+.profile.card {
+  border: 1px solid var(--fg);
+}
+
+#set-fname {
+  & #fname-form {
+    & input {
+      margin: 1rem auto;
+      display: block;
+      width: 50%;
+      line-height: 2rem;
+      font-size: 1.4rem;
+    }
+
+    & button {
+      display: block;
+      margin: auto;
+    }
+  }
+}
+
+#loading-msg {
+  bottom: 1rem;
+}

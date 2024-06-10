@@ -1,0 +1,18 @@
+[
+  {
+    "process_name": "kc",
+    "process_wasm_path": "/kinocast.wasm",
+    "on_exit": "Restart",
+    "request_networking": true,
+    "request_capabilities": [
+      "homepage:homepage:sys",
+      "http_server:distro:sys",
+      "http_client:distro:sys",
+      "vfs:distro:sys",
+      "sqlite:distro:sys",
+      "net:distro:sys"
+    ],
+    "grant_capabilities": [],
+    "public": true
+  }
+]

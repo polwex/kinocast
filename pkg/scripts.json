@@ -1,0 +1,9 @@
+{
+  "runner.wasm": {
+    "root": true,
+    "public": false,
+    "request_networking": false,
+    "request_capabilities": [],
+    "grant_capabilities": []
+  }
+}

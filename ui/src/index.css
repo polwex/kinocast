@@ -1,0 +1,442 @@
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* variables */
+  --dark-background: rgb(130, 59, 28);
+  --gray-button: rgba(253, 245, 220, 0.25);
+  --input-background: rgba(243, 84, 34, 0.25);
+  --medium-gray: #7e7e7e;
+  --orange-burnt: #e25f35;
+  --orange-light: #f36822;
+  --orange-medium: #f35422;
+  --text-dark: #22211f;
+  --text-light: #fff5d9;
+  --text-orange: #ff7533;
+  --kinode-red: rgb(243, 84, 34);
+  --border-color: grey;
+}
+
+[data-theme="dark"] {
+  --bg: black;
+  --fg: rgb(230, 230, 230);
+}
+
+[data-theme="light"] {
+  --bg: white;
+  --fg: black;
+}
+
+a {
+  font-weight: 500;
+  color: var(--kinode-red);
+  text-decoration: inherit;
+  cursor: pointer;
+}
+
+/* a:hover { */
+  /* color: black; */
+  /* font-weight: 700; */
+/* } */
+
+body,
+#root,
+html {
+  height: 100%;
+  min-height: 100%;
+  overscroll-behavior: none;
+  color: var(--text);
+  background-color: var(--bg);
+}
+
+body {
+  margin: 0;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  background-color: var(--kinode-red);
+  color: white;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.25s;
+  cursor: pointer;
+}
+
+/* small button */
+.sm-b {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.3em 0.6em;
+  background-color: var(--kinode-red);
+  color: white;
+  font-size: 0.7em;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.25s;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: blue;
+}
+
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+/* sortug tailwind */
+.card {
+  padding: 1rem;
+  max-width: max-content;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+}
+
+.g1 {
+  gap: 0.5rem;
+}
+
+.g2 {
+  gap: 1rem;
+}
+
+.address {
+  font-family: "Courier New", Courier, monospace;
+}
+
+.spread {
+  justify-content: space-between;
+}
+
+.even {
+  justify-content: space-evenly;
+}
+
+.flexc {
+  justify-content: center;
+}
+
+.cp {
+  cursor: pointer;
+}
+
+.gc {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.agc {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.ac {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.xc {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+}
+
+.tc {
+  text-align: center;
+}
+
+.bc {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.blocks {
+  & * {
+    display: block;
+  }
+}
+
+.bold {
+  font-weight: 700;
+}
+
+.weak {
+  opacity: 0.7;
+}
+
+.all-c {
+  & * {
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+.mb-1 {
+  margin-bottom: 1rem;
+}
+
+.error {
+  color: red;
+  text-align: center;
+}
+
+.tabs {
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+
+  & .tab {
+    cursor: pointer;
+    opacity: 0.5;
+  }
+
+  & .tab.active {
+    opacity: 1;
+  }
+}
+
+.disabled {
+  opacity: 0.5;
+}
+.smol{
+  font-size: 0.9rem;
+}
+
+/* The Modal (background) */
+#modal-bg {
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 998;
+}
+
+/* Modal Content */
+#modal-fg {
+  background-color: var(--bg);
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 20px;
+  z-index: 999;
+  max-height: 90vh;
+  min-height: 20vh;
+  max-width: 90vw;
+  overflow: auto;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --text: black;
+    --bg: white;
+    color: #213547;
+    background-color: #ffffff;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: rgb(200, 200, 200);
+    --bg: black;
+    color: #213547;
+    background-color: #ffffff;
+  }
+}
+
+#left-menu {
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+
+  #logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  #opts {
+    flex-grow: 1;
+  }
+
+  & .opt {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+
+    & img {
+      width: 2rem;
+      height: 2rem;
+    }
+  }
+
+  & .opt:hover:not(.disabled) {
+    background-color: lightgrey;
+  }
+}
+
+#timeline {
+  width: 800px;
+}
+
+#super-spinner {
+  width: 50%;
+}
+
+#login-spinner {
+  width: 100px;
+}
+
+/* left sidebar */
+#logo {
+  & img {
+    width: 50px;
+    height: 50px;
+    border-radius: 0.3rem;
+  }
+}
+
+#logged-as {
+  & img {
+    border: 1px solid black;
+    width: 30px;
+    height: 30px;
+    margin-right: 0.5rem;
+  }
+}
+
+.container-1 {
+  min-height: 100%;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.container-2 {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  min-height: 100%;
+}
+
+/* main */
+main {
+  height: 100%;
+  min-height: 100vh;
+  width: 100%;
+  border-color: var(--border-color);
+  position: relative;
+}
+
+@media (min-width: 1024px) {
+  main {
+    width: 620px;
+  }
+}
+
+@media (min-width: 640px) {
+  main {
+    width: 540px;
+    margin-right: 1rem;
+    border-left-width: 1px;
+    border-left-style: solid;
+    border-right-width: 1px;
+    border-right-style: solid;
+  }
+}
+
+/* spinner */
+.big-spin {
+  width: 200px;
+}
+
+
+#top-row {
+  & img {
+    width: 20px;
+  }
+}
+
+/* follows */
+#users {
+  & .prof {
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid black;
+
+    & .pfp {
+      width: 60px;
+    }
+
+    & .txt {
+      font-size: 0.9rem;
+    }
+
+    & .displayname {
+      font-weight: 600;
+    }
+
+    & .username {
+      opacity: 0.7;
+    }
+
+    & .bio {
+      font-size: 0.8rem;
+    }
+
+    & button {
+      min-width: 6rem;
+      font-size: 0.9rem;
+    }
+  }
+
+  & .prof:last-child {
+    border-bottom: 1px solid black;
+  }
+}

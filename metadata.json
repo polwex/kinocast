@@ -1,0 +1,16 @@
+{
+  "name": "kinocast",
+  "description": "Farcaster client for Kinode OS",
+  "image": "https://s3.sortug.com/img/kinocast-logo1.png",
+  "properties": {
+    "package_name": "kinocast",
+    "current_version": "0.1.0",
+    "publisher": "sortugdeva.os",
+    "mirrors": ["sortugdeva.os"],
+    "code_hashes": {
+      "0.1.0": "e9a1dbc41a72e7d0e6c84c03ea1dedefa9e91a123364e58b133d623dd0a917e3"
+    }
+  },
+  "external_url": "",
+  "animation_url": ""
+}
