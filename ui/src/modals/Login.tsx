@@ -192,10 +192,7 @@ function WalletNotConnected() {
 
 function PhraseInput() {
   const { setEl, setPhraseWc, error, setError, setLoading, pc } = pageState();
-  // const mnemonic = "into practice brick exit valid crowd fee orbit inhale easily base measure dolphin fringe salmon concert taxi kit usage become poem rib base group";
-  // habsul
-  const mnemonic =
-    "planet trash close pull clip estate social tide pilot marine guitar ship mechanic injury victory rather leisure zero select column impulse birth dry camera";
+  const mnemonic = "";
   const [input, setInput] = useState(mnemonic);
   const [privKey, setKey] = useState("");
   function onChange(e: React.FormEvent<HTMLTextAreaElement>) {
