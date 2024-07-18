@@ -1922,6 +1922,7 @@ pub struct CastAddBody {
     pub text: ::std::string::String,
     pub mentions_positions: ::std::vec::Vec<u32>,
     pub embeds: ::protobuf::RepeatedField<Embed>,
+    pub field_type: CastType,
     // message oneof groups
     pub parent: ::std::option::Option<CastAddBody_oneof_parent>,
     // special fields
@@ -2169,6 +2170,21 @@ impl CastAddBody {
     pub fn take_embeds(&mut self) -> ::protobuf::RepeatedField<Embed> {
         ::std::mem::replace(&mut self.embeds, ::protobuf::RepeatedField::new())
     }
+
+    // .CastType type = 8;
+
+
+    pub fn get_field_type(&self) -> CastType {
+        self.field_type
+    }
+    pub fn clear_field_type(&mut self) {
+        self.field_type = CastType::CAST;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_field_type(&mut self, v: CastType) {
+        self.field_type = v;
+    }
 }
 
 impl ::protobuf::Message for CastAddBody {
@@ -2217,6 +2233,9 @@ impl ::protobuf::Message for CastAddBody {
                 6 => {
                     ::protobuf::rt::read_repeated_message_into(wire_type, is, &mut self.embeds)?;
                 },
+                8 => {
+                    ::protobuf::rt::read_proto3_enum_with_unknown_fields_into(wire_type, is, &mut self.field_type, 8, &mut self.unknown_fields)?
+                },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
                 },
@@ -2245,6 +2264,9 @@ impl ::protobuf::Message for CastAddBody {
             let len = value.compute_size();
             my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
         };
+        if self.field_type != CastType::CAST {
+            my_size += ::protobuf::rt::enum_size(8, self.field_type);
+        }
         if let ::std::option::Option::Some(ref v) = self.parent {
             match v {
                 &CastAddBody_oneof_parent::parent_cast_id(ref v) => {
@@ -2279,6 +2301,9 @@ impl ::protobuf::Message for CastAddBody {
             os.write_raw_varint32(v.get_cached_size())?;
             v.write_to_with_cached_sizes(os)?;
         };
+        if self.field_type != CastType::CAST {
+            os.write_enum(8, ::protobuf::ProtobufEnum::value(&self.field_type))?;
+        }
         if let ::std::option::Option::Some(ref v) = self.parent {
             match v {
                 &CastAddBody_oneof_parent::parent_cast_id(ref v) => {
@@ -2364,6 +2389,11 @@ impl ::protobuf::Message for CastAddBody {
                 |m: &CastAddBody| { &m.embeds },
                 |m: &mut CastAddBody| { &mut m.embeds },
             ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeEnum<CastType>>(
+                "type",
+                |m: &CastAddBody| { &m.field_type },
+                |m: &mut CastAddBody| { &mut m.field_type },
+            ));
             ::protobuf::reflect::MessageDescriptor::new_pb_name::<CastAddBody>(
                 "CastAddBody",
                 fields,
@@ -2387,6 +2417,7 @@ impl ::protobuf::Clear for CastAddBody {
         self.text.clear();
         self.mentions_positions.clear();
         self.embeds.clear();
+        self.field_type = CastType::CAST;
         self.unknown_fields.clear();
     }
 }
@@ -4772,6 +4803,56 @@ impl ::protobuf::reflect::ProtobufValue for UserDataType {
 }
 
 #[derive(Clone,PartialEq,Eq,Debug,Hash)]
+pub enum CastType {
+    CAST = 0,
+    LONG_CAST = 1,
+}
+
+impl ::protobuf::ProtobufEnum for CastType {
+    fn value(&self) -> i32 {
+        *self as i32
+    }
+
+    fn from_i32(value: i32) -> ::std::option::Option<CastType> {
+        match value {
+            0 => ::std::option::Option::Some(CastType::CAST),
+            1 => ::std::option::Option::Some(CastType::LONG_CAST),
+            _ => ::std::option::Option::None
+        }
+    }
+
+    fn values() -> &'static [Self] {
+        static values: &'static [CastType] = &[
+            CastType::CAST,
+            CastType::LONG_CAST,
+        ];
+        values
+    }
+
+    fn enum_descriptor_static() -> &'static ::protobuf::reflect::EnumDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::EnumDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            ::protobuf::reflect::EnumDescriptor::new_pb_name::<CastType>("CastType", file_descriptor_proto())
+        })
+    }
+}
+
+impl ::std::marker::Copy for CastType {
+}
+
+impl ::std::default::Default for CastType {
+    fn default() -> Self {
+        CastType::CAST
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for CastType {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Enum(::protobuf::ProtobufEnum::descriptor(self))
+    }
+}
+
+#[derive(Clone,PartialEq,Eq,Debug,Hash)]
 pub enum ReactionType {
     REACTION_TYPE_NONE = 0,
     REACTION_TYPE_LIKE = 1,
@@ -4903,22 +4984,23 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     serDataBody\x12#\n\x04type\x18\x01\x20\x01(\x0e2\r.UserDataTypeR\x04type\
     B\0\x12\x16\n\x05value\x18\x02\x20\x01(\tR\x05valueB\0:\0\"N\n\x05Embed\
     \x12\x14\n\x03url\x18\x01\x20\x01(\tH\0R\x03urlB\0\x12$\n\x07cast_id\x18\
-    \x02\x20\x01(\x0b2\x07.CastIdH\0R\x06castIdB\0B\x07\n\x05embed:\0\"\xa5\
+    \x02\x20\x01(\x0b2\x07.CastIdH\0R\x06castIdB\0B\x07\n\x05embed:\0\"\xc6\
     \x02\n\x0bCastAddBody\x12-\n\x11embeds_deprecated\x18\x01\x20\x03(\tR\
     \x10embedsDeprecatedB\0\x12\x1c\n\x08mentions\x18\x02\x20\x03(\x04R\x08m\
     entionsB\0\x121\n\x0eparent_cast_id\x18\x03\x20\x01(\x0b2\x07.CastIdH\0R\
     \x0cparentCastIdB\0\x12!\n\nparent_url\x18\x07\x20\x01(\tH\0R\tparentUrl\
     B\0\x12\x14\n\x04text\x18\x04\x20\x01(\tR\x04textB\0\x12/\n\x12mentions_\
     positions\x18\x05\x20\x03(\rR\x11mentionsPositionsB\0\x12\x20\n\x06embed\
-    s\x18\x06\x20\x03(\x0b2\x06.EmbedR\x06embedsB\0B\x08\n\x06parent:\0\"5\n\
-    \x0eCastRemoveBody\x12!\n\x0btarget_hash\x18\x01\x20\x01(\x0cR\ntargetHa\
-    shB\0:\0\"4\n\x06CastId\x12\x12\n\x03fid\x18\x01\x20\x01(\x04R\x03fidB\0\
-    \x12\x14\n\x04hash\x18\x02\x20\x01(\x0cR\x04hashB\0:\0\"\x95\x01\n\x0cRe\
-    actionBody\x12#\n\x04type\x18\x01\x20\x01(\x0e2\r.ReactionTypeR\x04typeB\
-    \0\x121\n\x0etarget_cast_id\x18\x02\x20\x01(\x0b2\x07.CastIdH\0R\x0ctarg\
-    etCastIdB\0\x12!\n\ntarget_url\x18\x03\x20\x01(\tH\0R\ttargetUrlB\0B\x08\
-    \n\x06target:\0\"\xfb\x01\n\x1aVerificationAddAddressBody\x12\x1a\n\x07a\
-    ddress\x18\x01\x20\x01(\x0cR\x07addressB\0\x12)\n\x0fclaim_signature\x18\
+    s\x18\x06\x20\x03(\x0b2\x06.EmbedR\x06embedsB\0\x12\x1f\n\x04type\x18\
+    \x08\x20\x01(\x0e2\t.CastTypeR\x04typeB\0B\x08\n\x06parent:\0\"5\n\x0eCa\
+    stRemoveBody\x12!\n\x0btarget_hash\x18\x01\x20\x01(\x0cR\ntargetHashB\0:\
+    \0\"4\n\x06CastId\x12\x12\n\x03fid\x18\x01\x20\x01(\x04R\x03fidB\0\x12\
+    \x14\n\x04hash\x18\x02\x20\x01(\x0cR\x04hashB\0:\0\"\x95\x01\n\x0cReacti\
+    onBody\x12#\n\x04type\x18\x01\x20\x01(\x0e2\r.ReactionTypeR\x04typeB\0\
+    \x121\n\x0etarget_cast_id\x18\x02\x20\x01(\x0b2\x07.CastIdH\0R\x0ctarget\
+    CastIdB\0\x12!\n\ntarget_url\x18\x03\x20\x01(\tH\0R\ttargetUrlB\0B\x08\n\
+    \x06target:\0\"\xfb\x01\n\x1aVerificationAddAddressBody\x12\x1a\n\x07add\
+    ress\x18\x01\x20\x01(\x0cR\x07addressB\0\x12)\n\x0fclaim_signature\x18\
     \x02\x20\x01(\x0cR\x0eclaimSignatureB\0\x12\x1f\n\nblock_hash\x18\x03\
     \x20\x01(\x0cR\tblockHashB\0\x12-\n\x11verification_type\x18\x04\x20\x01\
     (\rR\x10verificationTypeB\0\x12\x1b\n\x08chain_id\x18\x05\x20\x01(\rR\
@@ -4956,9 +5038,10 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     _NONE\x10\0\x12\x16\n\x12USER_DATA_TYPE_PFP\x10\x01\x12\x1a\n\x16USER_DA\
     TA_TYPE_DISPLAY\x10\x02\x12\x16\n\x12USER_DATA_TYPE_BIO\x10\x03\x12\x16\
     \n\x12USER_DATA_TYPE_URL\x10\x05\x12\x1b\n\x17USER_DATA_TYPE_USERNAME\
-    \x10\x06\x1a\0*Z\n\x0cReactionType\x12\x16\n\x12REACTION_TYPE_NONE\x10\0\
-    \x12\x16\n\x12REACTION_TYPE_LIKE\x10\x01\x12\x18\n\x14REACTION_TYPE_RECA\
-    ST\x10\x02\x1a\0*8\n\x08Protocol\x12\x15\n\x11PROTOCOL_ETHEREUM\x10\0\
+    \x10\x06\x1a\0*%\n\x08CastType\x12\x08\n\x04CAST\x10\0\x12\r\n\tLONG_CAS\
+    T\x10\x01\x1a\0*Z\n\x0cReactionType\x12\x16\n\x12REACTION_TYPE_NONE\x10\
+    \0\x12\x16\n\x12REACTION_TYPE_LIKE\x10\x01\x12\x18\n\x14REACTION_TYPE_RE\
+    CAST\x10\x02\x1a\0*8\n\x08Protocol\x12\x15\n\x11PROTOCOL_ETHEREUM\x10\0\
     \x12\x13\n\x0fPROTOCOL_SOLANA\x10\x01\x1a\0B\0b\x06proto3\
 ";
 

@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { UserProfile } from "../types/farcaster";
 import { ReactNode } from "react";
 import { castsByFid, linksByFid, linksByTargetFid } from "../fetch/hub";
-import { id_login, logout, readProfile } from "../fetch/kinode";
+import { checkNew, id_login, logout, readProfile } from "../fetch/kinode";
 import { userCasts } from "../fetch/kinohub";
 type ModalOpts = {
   closable?: boolean;
@@ -10,21 +10,21 @@ type ModalOpts = {
   height?: string;
 };
 
-interface HistoryStore{
-  history: string[],
+interface HistoryStore {
+  history: string[];
   navigate: (path: string) => void;
-  reset: () => void
+  reset: () => void;
 }
 
 export const useHistory = create<HistoryStore>((set, get) => ({
   history: [window.location.pathname],
-  navigate: (path) => set((state) => {
-    const history = [path, ...state.history];
-    return {history}
-  }),
-  reset: () => set({history: []})
+  navigate: (path) =>
+    set((state) => {
+      const history = [path, ...state.history];
+      return { history };
+    }),
+  reset: () => set({ history: [] }),
 }));
-
 
 export interface GlobalState {
   // ui
@@ -62,21 +62,20 @@ const useGlobalState = create<GlobalState>((set, get) => ({
   //
   init: async () => {
     // await debug()
-    const prof= await readProfile();
-    console.log(prof, "prof")
-    if (prof)
-    set({prof})
+    await checkNew();
+    const prof = await readProfile();
+    console.log(prof, "prof");
+    if ("ok" in prof) set({ prof: prof.ok.profile });
   },
-  login: async(fid) => {
+  login: async (fid) => {
     const prof = await id_login(fid.toString());
-    set({prof})
+    set({ prof });
   },
   logout: async () => {
     const res = await logout();
-    set({prof: null})
+    set({ prof: null });
   },
   prof: null,
 }));
 
 export default useGlobalState;
-

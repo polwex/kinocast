@@ -19,27 +19,49 @@ export interface UserNameByFidRes {
   proofs: UserNameRes[];
 }
 
-export type MessageType = "MESSAGE_TYPE_CAST_ADD";
+export type MessageType =
+  | "MESSAGE_TYPE_CAST_ADD"
+  | "MESSAGE_TYPE_REACTION_ADD"
+  | "MESSAGE_TYPE_LINK_ADD"
+  | "MESSAGE_TYPE_USER_DATA_ADD";
+
 export type NetworkType = "FARCASTER_NETWORK_MAINNET";
 export type PID = {
   fid: Fid;
   hash: Hash;
 };
-export interface MessageData {
+export type CastAddBody = {
+  embedsDeprecated: [];
+  mentions: Fid[];
+  parentCastId: PID;
+  text: string;
+  mentionsPositions: number[];
+  embeds: any[];
+};
+export type ReactionBody = {
+  type: "REACTION_TYPE_LIKE" | "REACTION_TYPE_RECAST";
+  targetCastId: PID;
+};
+export type LinkBody = {
+  type: string;
+  origin: Fid;
+  target: Fid;
+};
+export type MessageBodyType<T extends MessageType> =
+  T extends "MESSAGE_TYPE_CAST_ADD"
+    ? { castAddBody: CastAddBody }
+    : T extends "MESSAGE_TYPE_REACTION_ADD"
+      ? { reactionBody: ReactionBody }
+      : T extends "MESSAGE_TYPE_LINK_ADD"
+        ? { linkBody: LinkBody }
+        : never;
+export interface MessageData<T extends MessageType> {
   data: {
-    type: MessageType;
+    type: T;
     fid: Fid;
     timestamp: number;
     network: NetworkType;
-    castAddBody: {
-      embedsDeprecated: [];
-      mentions: Fid[];
-      parentCastId: PID;
-      text: string;
-      mentionsPositions: number[];
-      embeds: any[];
-    };
-  };
+  } & MessageBodyType<T>;
   hash: Hash;
   hashScheme: "HASH_SCHEME_BLAKE3";
   signature: string;
@@ -125,7 +147,7 @@ export type OGImage = {
   height?: number;
   secure_url?: string;
   alt?: string;
-}
+};
 export type OGVideo = {
   url: string;
   width?: number;
@@ -133,19 +155,19 @@ export type OGVideo = {
   secure_url?: string;
   tag?: string;
   type?: string;
-}
+};
 export type OGAudio = {
   url: string;
   secure_url?: string;
   type?: string;
-}
+};
 export type TwatterMeta = {
   card?: string;
   url: string;
   title?: string;
   image?: string;
   description?: string;
-}
+};
 export type Frame = {
   embedURL: string;
   version: string; // "vNExt" | "2020-01-01";
@@ -156,38 +178,43 @@ export type Frame = {
   buttons: FrameButton[];
   state?: string; // up to 4k bytes
   inputText?: string; // 32bytes
-}
+};
 export type FrameButton = {
   text: string;
   action?: "post" | "post_redirect" | "link" | "mint" | "tx";
   target?: string;
   postUrl?: string;
-}
+};
 export type FrameActionJson = {
-    fid: Fid,
-    url: string,
-    messageHash: string,
-    timestamp: number,
-    network: number,
-    buttonIndex: number,
-    inputText: string | undefined //  if requested and no input, undefined if input not requested
-    state: string | undefined;
-    transactionId: string,
-    address: string,
-    castId: {
-      fid: Fid,
-      hash: string
-    };
-  };
-
-  export type FnameTransfer ={
+  fid: Fid;
+  url: string;
+  messageHash: string;
+  timestamp: number;
+  network: number;
+  buttonIndex: number;
+  inputText: string | undefined; //  if requested and no input, undefined if input not requested
+  state: string | undefined;
+  transactionId: string;
+  address: string;
+  castId: {
     fid: Fid;
-    from: number;
-    id: number;
-    owner: string;
-    server_signature: string;
-    timestamp: number;
-    to: number;
-    user_signature: number;
-    username: string;
-  }
+    hash: string;
+  };
+};
+
+export type FnameTransfer = {
+  fid: Fid;
+  from: number;
+  id: number;
+  owner: string;
+  server_signature: string;
+  timestamp: number;
+  to: number;
+  user_signature: number;
+  username: string;
+};
+
+export type HubResponse<T extends MessageType> = {
+  messages: MessageData<T>[];
+  nextPageToken: string;
+};

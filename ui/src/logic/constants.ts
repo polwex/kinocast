@@ -1,6 +1,6 @@
 import { Hub } from "./types/farcaster";
 
-export const BASE_URL = "kc:kinocast:sortugdev.os";
+export const BASE_URL = import.meta.env.BASE_URL;
 export const PAGE_SIZE = 50;
 export const versionNum = "0.1.0";
 export const APP_FID = BigInt(500337);
@@ -24,6 +24,7 @@ export const URL_REGEX =
 
 export const PG_URL = "https://kino.sortug.com/pg";
 export const RPC_URL = "https://kino.sortug.com/rpc";
+export const HUB_URL = "https://kino.sortug.com/http";
 
 export const LocalHub: Hub = {
   url: "192.168.1.110",

@@ -28,9 +28,7 @@ async function goPost(path: string, body: Buffer) {
   return res.json();
 }
 
-export async function editProfile(value: string, type: number) {
-  
-}
+export async function editProfile(value: string, type: number) {}
 
 export async function submitMessage(text: string, reply: PID | null) {
   // const castAddBody = {

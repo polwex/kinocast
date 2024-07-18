@@ -29,21 +29,18 @@ pub fn make_signature(hash: Vec<u8>) -> (Vec<u8>, Vec<u8>) {
 }
 
 fn make_fc_timestamp() -> u32 {
-  return (std::time::SystemTime::now()
-    .duration_since(std::time::UNIX_EPOCH)
-    .unwrap()
-    .as_secs()
-    - FARCASTER_EPOCH) as u32;
+  return (std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)
+                                      .unwrap()
+                                      .as_secs()
+          - FARCASTER_EPOCH) as u32;
 }
 fn send(body: Vec<u8>) -> Result<String> {
-  let urls = format!("{}{}", hub::HUB_RPC_URL, "/v1/submitMessage");
+  let urls = format!("{}{}", hub::HUB_HTTP_URL, "/v1/submitMessage");
   let urlss = urls.as_str();
   let url = Url::parse(urlss).unwrap();
   let mut headers = std::collections::HashMap::new();
-  headers.insert(
-    "Content-Type".to_string(),
-    "application/octet-stream".to_string(),
-  );
+  headers.insert("Content-Type".to_string(),
+                 "application/octet-stream".to_string());
   let res = send_request_await_response(Method::POST, url, Some(headers), 5000, body)?;
   let res_json = String::from_utf8(res.into_body())?;
   println!("res json{}", res_json);
@@ -99,12 +96,11 @@ pub fn rt_add(fid: u64, target: &PID, signer: SigningKey) -> Result<String> {
   let rt = ReactionType::REACTION_TYPE_RECAST;
   react_add(fid, rt, target, signer)
 }
-pub fn react_add(
-  fid: u64,
-  reaction_type: ReactionType,
-  target: &PID,
-  signer: SigningKey,
-) -> Result<String> {
+pub fn react_add(fid: u64,
+                 reaction_type: ReactionType,
+                 target: &PID,
+                 signer: SigningKey)
+                 -> Result<String> {
   let network = FarcasterNetwork::FARCASTER_NETWORK_MAINNET;
 
   // Construct the cast add message
@@ -190,17 +186,13 @@ pub fn frame_action(f: FrameBodyJson, fid: u64, signer: SigningKey) -> Result<St
   headers.insert("Content-Type".to_string(), "application/json".to_string());
   let frame_url = Url::parse(&f2.url)?;
   let trusted_data = Td { message_bytes };
-  let frame_req = FrameBodyJsonReq {
-    untrusted_data: f2,
-    trusted_data,
-  };
-  let frame_res = send_request_await_response(
-    Method::POST,
-    frame_url,
-    Some(headers),
-    5000,
-    serde_json::to_vec(&frame_req)?,
-  )?;
+  let frame_req = FrameBodyJsonReq { untrusted_data: f2,
+                                     trusted_data };
+  let frame_res = send_request_await_response(Method::POST,
+                                              frame_url,
+                                              Some(headers),
+                                              5000,
+                                              serde_json::to_vec(&frame_req)?)?;
   let res_json = String::from_utf8(frame_res.into_body())?;
   println!("res json{}", res_json);
   Ok(res_json)
@@ -210,10 +202,8 @@ fn validate(body: Vec<u8>) -> Result<String> {
   let urlss = urls.as_str();
   let url = Url::parse(urlss).unwrap();
   let mut headers = std::collections::HashMap::new();
-  headers.insert(
-    "Content-Type".to_string(),
-    "application/octet-stream".to_string(),
-  );
+  headers.insert("Content-Type".to_string(),
+                 "application/octet-stream".to_string());
   let res = send_request_await_response(Method::POST, url, Some(headers), 5000, body)?;
   let res_json = String::from_utf8(res.into_body())?;
   println!("res json{}", res_json);

@@ -44,8 +44,8 @@ a {
 }
 
 /* a:hover { */
-  /* color: black; */
-  /* font-weight: 700; */
+/* color: black; */
+/* font-weight: 700; */
 /* } */
 
 body,
@@ -235,7 +235,7 @@ button:focus-visible {
 .disabled {
   opacity: 0.5;
 }
-.smol{
+.smol {
   font-size: 0.9rem;
 }
 
@@ -393,7 +393,6 @@ main {
 .big-spin {
   width: 200px;
 }
-
 
 #top-row {
   & img {

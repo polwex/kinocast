@@ -148,7 +148,6 @@
     & .date {
       cursor: pointer;
     }
-
   }
 
   & .frame {
@@ -297,7 +296,6 @@
     /* font-family: Arial, Helvetica, sans-serif; */
     margin: 0.3rem 0 1rem 0;
     word-break: break-word;
-
   }
 
   & paragraph {
@@ -462,7 +460,7 @@
     margin-top: 1rem;
   }
 
-  #replies>& first-child {
+  #replies > & first-child {
     border-top: 1px solid black;
   }
 
@@ -699,7 +697,8 @@
 } */
 
 /* refs */
-.reference {}
+.reference {
+}
 
 /* polls */
 .trill-poll {
@@ -707,14 +706,12 @@
   border-radius: 1rem;
   padding: 0.5rem;
   position: relative;
-  background: linear-gradient(90deg,
-      rgba(255, 255, 168, 0.4) 0%,
-      /* Lighter yellow */
-      rgba(255, 233, 150, 0.5) 52%,
-      /* Mid-tone gold */
-      rgba(255, 209, 0, 0.4) 100%
-      /* Deeper gold */
-    );
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 168, 0.4) 0%,
+    /* Lighter yellow */ rgba(255, 233, 150, 0.5) 52%,
+    /* Mid-tone gold */ rgba(255, 209, 0, 0.4) 100% /* Deeper gold */
+  );
 }
 
 .trill-poll .poll-option {

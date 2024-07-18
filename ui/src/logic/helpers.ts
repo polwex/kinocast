@@ -48,7 +48,7 @@ export function displayCount(c: number): string {
   if (c < 1_000) return `${c}`;
   if (c >= 1_000 && c < 1_000_000) return `${Math.round(c / 1_00) / 10}K`;
   if (c >= 1_000_000) return `${Math.round(c / 100_000) / 10}M`;
-  else return ""
+  else return "";
 }
 
 // parsing hub
@@ -167,7 +167,6 @@ export function abbreviateNumber(n: number): string {
   return scaled.toFixed(1) + suffixes[i];
 }
 export function abbreviate(s: string, len: number): string {
-  if (s.length < len) return s
-  else return `${s.slice(0, len)}...`
+  if (s.length < len) return s;
+  else return `${s.slice(0, len)}...`;
 }
-

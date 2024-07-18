@@ -35,7 +35,7 @@ export type FullCastRes = {
   cast: CastRes;
   likes: ReactionRes[];
   rts: ReactionRes[];
-  // replies: CastRes[];
+  replies: CastRes[];
   reply_count: number;
 };
 export type ReactionRes = {};

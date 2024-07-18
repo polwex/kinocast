@@ -4,11 +4,13 @@
   "image": "https://s3.sortug.com/img/kinocast-logo1.png",
   "properties": {
     "package_name": "kinocast",
-    "current_version": "0.1.0",
-    "publisher": "sortugdeva.os",
+    "wit_version": 0,
+    "current_version": "0.1.1",
+    "publisher": "sortugdev.os",
     "mirrors": ["sortugdeva.os"],
     "code_hashes": {
-      "0.1.0": "e9a1dbc41a72e7d0e6c84c03ea1dedefa9e91a123364e58b133d623dd0a917e3"
+      "0.1.0": "e9a1dbc41a72e7d0e6c84c03ea1dedefa9e91a123364e58b133d623dd0a917e3",
+      "0.1.1": "d6b6ffd33e7b9a15c8da5b534b3a02c226a181565e9848b0cbd1377ca4971249"
     }
   },
   "external_url": "",

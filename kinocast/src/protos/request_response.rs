@@ -1124,6 +1124,7 @@ pub struct DbStats {
     pub num_messages: u64,
     pub num_fid_events: u64,
     pub num_fname_events: u64,
+    pub approx_size: u64,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -1184,6 +1185,21 @@ impl DbStats {
     pub fn set_num_fname_events(&mut self, v: u64) {
         self.num_fname_events = v;
     }
+
+    // uint64 approx_size = 4;
+
+
+    pub fn get_approx_size(&self) -> u64 {
+        self.approx_size
+    }
+    pub fn clear_approx_size(&mut self) {
+        self.approx_size = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_approx_size(&mut self, v: u64) {
+        self.approx_size = v;
+    }
 }
 
 impl ::protobuf::Message for DbStats {
@@ -1216,6 +1232,13 @@ impl ::protobuf::Message for DbStats {
                     let tmp = is.read_uint64()?;
                     self.num_fname_events = tmp;
                 },
+                4 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint64()?;
+                    self.approx_size = tmp;
+                },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
                 },
@@ -1237,6 +1260,9 @@ impl ::protobuf::Message for DbStats {
         if self.num_fname_events != 0 {
             my_size += ::protobuf::rt::value_size(3, self.num_fname_events, ::protobuf::wire_format::WireTypeVarint);
         }
+        if self.approx_size != 0 {
+            my_size += ::protobuf::rt::value_size(4, self.approx_size, ::protobuf::wire_format::WireTypeVarint);
+        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -1251,6 +1277,9 @@ impl ::protobuf::Message for DbStats {
         }
         if self.num_fname_events != 0 {
             os.write_uint64(3, self.num_fname_events)?;
+        }
+        if self.approx_size != 0 {
+            os.write_uint64(4, self.approx_size)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -1305,6 +1334,11 @@ impl ::protobuf::Message for DbStats {
                 |m: &DbStats| { &m.num_fname_events },
                 |m: &mut DbStats| { &mut m.num_fname_events },
             ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+                "approx_size",
+                |m: &DbStats| { &m.approx_size },
+                |m: &mut DbStats| { &mut m.approx_size },
+            ));
             ::protobuf::reflect::MessageDescriptor::new_pb_name::<DbStats>(
                 "DbStats",
                 fields,
@@ -1324,6 +1358,7 @@ impl ::protobuf::Clear for DbStats {
         self.num_messages = 0;
         self.num_fid_events = 0;
         self.num_fname_events = 0;
+        self.approx_size = 0;
         self.unknown_fields.clear();
     }
 }
@@ -9158,112 +9193,112 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \x20\x01(\tR\x08nicknameB\0\x12\x1d\n\troot_hash\x18\x04\x20\x01(\tR\x08\
     rootHashB\0\x12%\n\x08db_stats\x18\x05\x20\x01(\x0b2\x08.DbStatsR\x07dbS\
     tatsB\0\x12\x18\n\x06peerId\x18\x06\x20\x01(\tR\x06peerIdB\0\x12*\n\x10h\
-    ub_operator_fid\x18\x07\x20\x01(\x04R\x0ehubOperatorFidB\0:\0\"\x84\x01\
+    ub_operator_fid\x18\x07\x20\x01(\x04R\x0ehubOperatorFidB\0:\0\"\xa7\x01\
     \n\x07DbStats\x12#\n\x0cnum_messages\x18\x01\x20\x01(\x04R\x0bnumMessage\
     sB\0\x12&\n\x0enum_fid_events\x18\x02\x20\x01(\x04R\x0cnumFidEventsB\0\
-    \x12*\n\x10num_fname_events\x18\x03\x20\x01(\x04R\x0enumFnameEventsB\0:\
-    \0\"/\n\x11SyncStatusRequest\x12\x18\n\x06peerId\x18\x01\x20\x01(\tR\x06\
-    peerIdB\0:\0\"\x90\x01\n\x12SyncStatusResponse\x12\x1f\n\nis_syncing\x18\
-    \x01\x20\x01(\x08R\tisSyncingB\0\x12.\n\x0bsync_status\x18\x02\x20\x03(\
-    \x0b2\x0b.SyncStatusR\nsyncStatusB\0\x12'\n\x0eengine_started\x18\x03\
-    \x20\x01(\x08R\rengineStartedB\0:\0\"\xd0\x02\n\nSyncStatus\x12\x18\n\
-    \x06peerId\x18\x01\x20\x01(\tR\x06peerIdB\0\x12\x18\n\x06inSync\x18\x02\
-    \x20\x01(\tR\x06inSyncB\0\x12\x20\n\nshouldSync\x18\x03\x20\x01(\x08R\ns\
-    houldSyncB\0\x12,\n\x10divergencePrefix\x18\x04\x20\x01(\tR\x10divergenc\
-    ePrefixB\0\x124\n\x14divergenceSecondsAgo\x18\x05\x20\x01(\x05R\x14diver\
-    genceSecondsAgoB\0\x12&\n\rtheirMessages\x18\x06\x20\x01(\x04R\rtheirMes\
-    sagesB\0\x12\"\n\x0bourMessages\x18\x07\x20\x01(\x04R\x0bourMessagesB\0\
-    \x12\"\n\x0blastBadSync\x18\x08\x20\x01(\x03R\x0blastBadSyncB\0\x12\x16\
-    \n\x05score\x18\t\x20\x01(\x03R\x05scoreB\0:\0\"\xaa\x01\n\x18TrieNodeMe\
-    tadataResponse\x12\x18\n\x06prefix\x18\x01\x20\x01(\x0cR\x06prefixB\0\
-    \x12#\n\x0cnum_messages\x18\x02\x20\x01(\x04R\x0bnumMessagesB\0\x12\x14\
-    \n\x04hash\x18\x03\x20\x01(\tR\x04hashB\0\x127\n\x08children\x18\x04\x20\
-    \x03(\x0b2\x19.TrieNodeMetadataResponseR\x08childrenB\0:\0\"\xa5\x01\n\
-    \x18TrieNodeSnapshotResponse\x12\x18\n\x06prefix\x18\x01\x20\x01(\x0cR\
-    \x06prefixB\0\x12)\n\x0fexcluded_hashes\x18\x02\x20\x03(\tR\x0eexcludedH\
-    ashesB\0\x12#\n\x0cnum_messages\x18\x03\x20\x01(\x04R\x0bnumMessagesB\0\
-    \x12\x1d\n\troot_hash\x18\x04\x20\x01(\tR\x08rootHashB\0:\0\",\n\x0eTrie\
-    NodePrefix\x12\x18\n\x06prefix\x18\x01\x20\x01(\x0cR\x06prefixB\0:\0\"(\
-    \n\x07SyncIds\x12\x1b\n\x08sync_ids\x18\x01\x20\x03(\x0cR\x07syncIdsB\0:\
-    \0\"~\n\nFidRequest\x12\x12\n\x03fid\x18\x01\x20\x01(\x04R\x03fidB\0\x12\
-    \x1d\n\tpage_size\x18\x02\x20\x01(\rR\x08pageSizeB\0\x12\x1f\n\npage_tok\
-    en\x18\x03\x20\x01(\x0cR\tpageTokenB\0\x12\x1a\n\x07reverse\x18\x04\x20\
-    \x01(\x08R\x07reverseB\0:\0\"k\n\x0bFidsRequest\x12\x1d\n\tpage_size\x18\
-    \x01\x20\x01(\rR\x08pageSizeB\0\x12\x1f\n\npage_token\x18\x02\x20\x01(\
-    \x0cR\tpageTokenB\0\x12\x1a\n\x07reverse\x18\x03\x20\x01(\x08R\x07revers\
-    eB\0:\0\"P\n\x0cFidsResponse\x12\x14\n\x04fids\x18\x01\x20\x03(\x04R\x04\
-    fidsB\0\x12(\n\x0fnext_page_token\x18\x02\x20\x01(\x0cR\rnextPageTokenB\
-    \0:\0\"f\n\x10MessagesResponse\x12&\n\x08messages\x18\x01\x20\x03(\x0b2\
-    \x08.MessageR\x08messagesB\0\x12(\n\x0fnext_page_token\x18\x02\x20\x01(\
-    \x0cR\rnextPageTokenB\0:\0\"\xd4\x01\n\x14CastsByParentRequest\x121\n\
-    \x0eparent_cast_id\x18\x01\x20\x01(\x0b2\x07.CastIdH\0R\x0cparentCastIdB\
-    \0\x12!\n\nparent_url\x18\x05\x20\x01(\tH\0R\tparentUrlB\0\x12\x1d\n\tpa\
-    ge_size\x18\x02\x20\x01(\rR\x08pageSizeB\0\x12\x1f\n\npage_token\x18\x03\
-    \x20\x01(\x0cR\tpageTokenB\0\x12\x1a\n\x07reverse\x18\x04\x20\x01(\x08R\
-    \x07reverseB\0B\x08\n\x06parent:\0\"\xbd\x01\n\x0fReactionRequest\x12\
-    \x12\n\x03fid\x18\x01\x20\x01(\x04R\x03fidB\0\x124\n\rreaction_type\x18\
-    \x02\x20\x01(\x0e2\r.ReactionTypeR\x0creactionTypeB\0\x121\n\x0etarget_c\
-    ast_id\x18\x03\x20\x01(\x0b2\x07.CastIdH\0R\x0ctargetCastIdB\0\x12!\n\nt\
-    arget_url\x18\x04\x20\x01(\tH\0R\ttargetUrlB\0B\x08\n\x06target:\0\"\xbf\
-    \x01\n\x15ReactionsByFidRequest\x12\x12\n\x03fid\x18\x01\x20\x01(\x04R\
-    \x03fidB\0\x124\n\rreaction_type\x18\x02\x20\x01(\x0e2\r.ReactionTypeR\
-    \x0creactionTypeB\0\x12\x1d\n\tpage_size\x18\x03\x20\x01(\rR\x08pageSize\
-    B\0\x12\x1f\n\npage_token\x18\x04\x20\x01(\x0cR\tpageTokenB\0\x12\x1a\n\
-    \x07reverse\x18\x05\x20\x01(\x08R\x07reverseB\0:\0\"\x8e\x02\n\x18Reacti\
-    onsByTargetRequest\x121\n\x0etarget_cast_id\x18\x01\x20\x01(\x0b2\x07.Ca\
-    stIdH\0R\x0ctargetCastIdB\0\x12!\n\ntarget_url\x18\x06\x20\x01(\tH\0R\tt\
-    argetUrlB\0\x124\n\rreaction_type\x18\x02\x20\x01(\x0e2\r.ReactionTypeR\
-    \x0creactionTypeB\0\x12\x1d\n\tpage_size\x18\x03\x20\x01(\rR\x08pageSize\
-    B\0\x12\x1f\n\npage_token\x18\x04\x20\x01(\x0cR\tpageTokenB\0\x12\x1a\n\
-    \x07reverse\x18\x05\x20\x01(\x08R\x07reverseB\0B\x08\n\x06target:\0\"^\n\
-    \x0fUserDataRequest\x12\x12\n\x03fid\x18\x01\x20\x01(\x04R\x03fidB\0\x12\
-    5\n\x0euser_data_type\x18\x02\x20\x01(\x0e2\r.UserDataTypeR\x0cuserDataT\
-    ypeB\0:\0\"2\n\x18NameRegistryEventRequest\x12\x14\n\x04name\x18\x01\x20\
-    \x01(\x0cR\x04nameB\0:\0\"1\n\x19RentRegistryEventsRequest\x12\x12\n\x03\
-    fid\x18\x01\x20\x01(\x04R\x03fidB\0:\0\"\xbb\x01\n\x13OnChainEventReques\
-    t\x12\x12\n\x03fid\x18\x01\x20\x01(\x04R\x03fidB\0\x122\n\nevent_type\
-    \x18\x02\x20\x01(\x0e2\x11.OnChainEventTypeR\teventTypeB\0\x12\x1d\n\tpa\
-    ge_size\x18\x03\x20\x01(\rR\x08pageSizeB\0\x12\x1f\n\npage_token\x18\x04\
-    \x20\x01(\x0cR\tpageTokenB\0\x12\x1a\n\x07reverse\x18\x05\x20\x01(\x08R\
-    \x07reverseB\0:\0\"k\n\x14OnChainEventResponse\x12'\n\x06events\x18\x01\
-    \x20\x03(\x0b2\r.OnChainEventR\x06eventsB\0\x12(\n\x0fnext_page_token\
-    \x18\x02\x20\x01(\x0cR\rnextPageTokenB\0:\0\"Z\n\x15StorageLimitsRespons\
-    e\x12'\n\x06limits\x18\x01\x20\x03(\x0b2\r.StorageLimitR\x06limitsB\0\
-    \x12\x16\n\x05units\x18\x02\x20\x01(\rR\x05unitsB\0:\0\"\xd7\x01\n\x0cSt\
-    orageLimit\x12+\n\nstore_type\x18\x01\x20\x01(\x0e2\n.StoreTypeR\tstoreT\
-    ypeB\0\x12\x14\n\x04name\x18\x02\x20\x01(\tR\x04nameB\0\x12\x16\n\x05lim\
-    it\x18\x03\x20\x01(\x04R\x05limitB\0\x12\x14\n\x04used\x18\x04\x20\x01(\
-    \x04R\x04usedB\0\x12.\n\x11earliestTimestamp\x18\x05\x20\x01(\x04R\x11ea\
-    rliestTimestampB\0\x12$\n\x0cearliestHash\x18\x06\x20\x01(\x0cR\x0cearli\
-    estHashB\0:\0\".\n\x14UsernameProofRequest\x12\x14\n\x04name\x18\x01\x20\
-    \x01(\x0cR\x04nameB\0:\0\"D\n\x16UsernameProofsResponse\x12(\n\x06proofs\
-    \x18\x01\x20\x03(\x0b2\x0e.UserNameProofR\x06proofsB\0:\0\"G\n\x13Verifi\
-    cationRequest\x12\x12\n\x03fid\x18\x01\x20\x01(\x04R\x03fidB\0\x12\x1a\n\
-    \x07address\x18\x02\x20\x01(\x0cR\x07addressB\0:\0\"?\n\rSignerRequest\
-    \x12\x12\n\x03fid\x18\x01\x20\x01(\x04R\x03fidB\0\x12\x18\n\x06signer\
-    \x18\x02\x20\x01(\x0cR\x06signerB\0:\0\"o\n\x0bLinkRequest\x12\x12\n\x03\
-    fid\x18\x01\x20\x01(\x04R\x03fidB\0\x12\x1d\n\tlink_type\x18\x02\x20\x01\
-    (\tR\x08linkTypeB\0\x12!\n\ntarget_fid\x18\x03\x20\x01(\x04H\0R\ttargetF\
-    idB\0B\x08\n\x06target:\0\"\xa4\x01\n\x11LinksByFidRequest\x12\x12\n\x03\
-    fid\x18\x01\x20\x01(\x04R\x03fidB\0\x12\x1d\n\tlink_type\x18\x02\x20\x01\
-    (\tR\x08linkTypeB\0\x12\x1d\n\tpage_size\x18\x03\x20\x01(\rR\x08pageSize\
-    B\0\x12\x1f\n\npage_token\x18\x04\x20\x01(\x0cR\tpageTokenB\0\x12\x1a\n\
-    \x07reverse\x18\x05\x20\x01(\x08R\x07reverseB\0:\0\"\xc0\x01\n\x14LinksB\
-    yTargetRequest\x12!\n\ntarget_fid\x18\x01\x20\x01(\x04H\0R\ttargetFidB\0\
-    \x12\x1d\n\tlink_type\x18\x02\x20\x01(\tR\x08linkTypeB\0\x12\x1d\n\tpage\
-    _size\x18\x03\x20\x01(\rR\x08pageSizeB\0\x12\x1f\n\npage_token\x18\x04\
-    \x20\x01(\x0cR\tpageTokenB\0\x12\x1a\n\x07reverse\x18\x05\x20\x01(\x08R\
-    \x07reverseB\0B\x08\n\x06target:\0\"?\n\x1fIdRegistryEventByAddressReque\
-    st\x12\x1a\n\x07address\x18\x01\x20\x01(\x0cR\x07addressB\0:\0\"N\n\x13C\
-    ontactInfoResponse\x125\n\x08contacts\x18\x01\x20\x03(\x0b2\x17.ContactI\
-    nfoContentBodyR\x08contactsB\0:\0\"T\n\x12ValidationResponse\x12\x16\n\
-    \x05valid\x18\x01\x20\x01(\x08R\x05validB\0\x12$\n\x07message\x18\x02\
-    \x20\x01(\x0b2\x08.MessageR\x07messageB\0:\0*\xc0\x01\n\tStoreType\x12\
-    \x13\n\x0fSTORE_TYPE_NONE\x10\0\x12\x14\n\x10STORE_TYPE_CASTS\x10\x01\
-    \x12\x14\n\x10STORE_TYPE_LINKS\x10\x02\x12\x18\n\x14STORE_TYPE_REACTIONS\
-    \x10\x03\x12\x18\n\x14STORE_TYPE_USER_DATA\x10\x04\x12\x1c\n\x18STORE_TY\
-    PE_VERIFICATIONS\x10\x05\x12\x1e\n\x1aSTORE_TYPE_USERNAME_PROOFS\x10\x06\
-    \x1a\0B\0b\x06proto3\
+    \x12*\n\x10num_fname_events\x18\x03\x20\x01(\x04R\x0enumFnameEventsB\0\
+    \x12!\n\x0bapprox_size\x18\x04\x20\x01(\x04R\napproxSizeB\0:\0\"/\n\x11S\
+    yncStatusRequest\x12\x18\n\x06peerId\x18\x01\x20\x01(\tR\x06peerIdB\0:\0\
+    \"\x90\x01\n\x12SyncStatusResponse\x12\x1f\n\nis_syncing\x18\x01\x20\x01\
+    (\x08R\tisSyncingB\0\x12.\n\x0bsync_status\x18\x02\x20\x03(\x0b2\x0b.Syn\
+    cStatusR\nsyncStatusB\0\x12'\n\x0eengine_started\x18\x03\x20\x01(\x08R\r\
+    engineStartedB\0:\0\"\xd0\x02\n\nSyncStatus\x12\x18\n\x06peerId\x18\x01\
+    \x20\x01(\tR\x06peerIdB\0\x12\x18\n\x06inSync\x18\x02\x20\x01(\tR\x06inS\
+    yncB\0\x12\x20\n\nshouldSync\x18\x03\x20\x01(\x08R\nshouldSyncB\0\x12,\n\
+    \x10divergencePrefix\x18\x04\x20\x01(\tR\x10divergencePrefixB\0\x124\n\
+    \x14divergenceSecondsAgo\x18\x05\x20\x01(\x05R\x14divergenceSecondsAgoB\
+    \0\x12&\n\rtheirMessages\x18\x06\x20\x01(\x04R\rtheirMessagesB\0\x12\"\n\
+    \x0bourMessages\x18\x07\x20\x01(\x04R\x0bourMessagesB\0\x12\"\n\x0blastB\
+    adSync\x18\x08\x20\x01(\x03R\x0blastBadSyncB\0\x12\x16\n\x05score\x18\t\
+    \x20\x01(\x03R\x05scoreB\0:\0\"\xaa\x01\n\x18TrieNodeMetadataResponse\
+    \x12\x18\n\x06prefix\x18\x01\x20\x01(\x0cR\x06prefixB\0\x12#\n\x0cnum_me\
+    ssages\x18\x02\x20\x01(\x04R\x0bnumMessagesB\0\x12\x14\n\x04hash\x18\x03\
+    \x20\x01(\tR\x04hashB\0\x127\n\x08children\x18\x04\x20\x03(\x0b2\x19.Tri\
+    eNodeMetadataResponseR\x08childrenB\0:\0\"\xa5\x01\n\x18TrieNodeSnapshot\
+    Response\x12\x18\n\x06prefix\x18\x01\x20\x01(\x0cR\x06prefixB\0\x12)\n\
+    \x0fexcluded_hashes\x18\x02\x20\x03(\tR\x0eexcludedHashesB\0\x12#\n\x0cn\
+    um_messages\x18\x03\x20\x01(\x04R\x0bnumMessagesB\0\x12\x1d\n\troot_hash\
+    \x18\x04\x20\x01(\tR\x08rootHashB\0:\0\",\n\x0eTrieNodePrefix\x12\x18\n\
+    \x06prefix\x18\x01\x20\x01(\x0cR\x06prefixB\0:\0\"(\n\x07SyncIds\x12\x1b\
+    \n\x08sync_ids\x18\x01\x20\x03(\x0cR\x07syncIdsB\0:\0\"~\n\nFidRequest\
+    \x12\x12\n\x03fid\x18\x01\x20\x01(\x04R\x03fidB\0\x12\x1d\n\tpage_size\
+    \x18\x02\x20\x01(\rR\x08pageSizeB\0\x12\x1f\n\npage_token\x18\x03\x20\
+    \x01(\x0cR\tpageTokenB\0\x12\x1a\n\x07reverse\x18\x04\x20\x01(\x08R\x07r\
+    everseB\0:\0\"k\n\x0bFidsRequest\x12\x1d\n\tpage_size\x18\x01\x20\x01(\r\
+    R\x08pageSizeB\0\x12\x1f\n\npage_token\x18\x02\x20\x01(\x0cR\tpageTokenB\
+    \0\x12\x1a\n\x07reverse\x18\x03\x20\x01(\x08R\x07reverseB\0:\0\"P\n\x0cF\
+    idsResponse\x12\x14\n\x04fids\x18\x01\x20\x03(\x04R\x04fidsB\0\x12(\n\
+    \x0fnext_page_token\x18\x02\x20\x01(\x0cR\rnextPageTokenB\0:\0\"f\n\x10M\
+    essagesResponse\x12&\n\x08messages\x18\x01\x20\x03(\x0b2\x08.MessageR\
+    \x08messagesB\0\x12(\n\x0fnext_page_token\x18\x02\x20\x01(\x0cR\rnextPag\
+    eTokenB\0:\0\"\xd4\x01\n\x14CastsByParentRequest\x121\n\x0eparent_cast_i\
+    d\x18\x01\x20\x01(\x0b2\x07.CastIdH\0R\x0cparentCastIdB\0\x12!\n\nparent\
+    _url\x18\x05\x20\x01(\tH\0R\tparentUrlB\0\x12\x1d\n\tpage_size\x18\x02\
+    \x20\x01(\rR\x08pageSizeB\0\x12\x1f\n\npage_token\x18\x03\x20\x01(\x0cR\
+    \tpageTokenB\0\x12\x1a\n\x07reverse\x18\x04\x20\x01(\x08R\x07reverseB\0B\
+    \x08\n\x06parent:\0\"\xbd\x01\n\x0fReactionRequest\x12\x12\n\x03fid\x18\
+    \x01\x20\x01(\x04R\x03fidB\0\x124\n\rreaction_type\x18\x02\x20\x01(\x0e2\
+    \r.ReactionTypeR\x0creactionTypeB\0\x121\n\x0etarget_cast_id\x18\x03\x20\
+    \x01(\x0b2\x07.CastIdH\0R\x0ctargetCastIdB\0\x12!\n\ntarget_url\x18\x04\
+    \x20\x01(\tH\0R\ttargetUrlB\0B\x08\n\x06target:\0\"\xbf\x01\n\x15Reactio\
+    nsByFidRequest\x12\x12\n\x03fid\x18\x01\x20\x01(\x04R\x03fidB\0\x124\n\r\
+    reaction_type\x18\x02\x20\x01(\x0e2\r.ReactionTypeR\x0creactionTypeB\0\
+    \x12\x1d\n\tpage_size\x18\x03\x20\x01(\rR\x08pageSizeB\0\x12\x1f\n\npage\
+    _token\x18\x04\x20\x01(\x0cR\tpageTokenB\0\x12\x1a\n\x07reverse\x18\x05\
+    \x20\x01(\x08R\x07reverseB\0:\0\"\x8e\x02\n\x18ReactionsByTargetRequest\
+    \x121\n\x0etarget_cast_id\x18\x01\x20\x01(\x0b2\x07.CastIdH\0R\x0ctarget\
+    CastIdB\0\x12!\n\ntarget_url\x18\x06\x20\x01(\tH\0R\ttargetUrlB\0\x124\n\
+    \rreaction_type\x18\x02\x20\x01(\x0e2\r.ReactionTypeR\x0creactionTypeB\0\
+    \x12\x1d\n\tpage_size\x18\x03\x20\x01(\rR\x08pageSizeB\0\x12\x1f\n\npage\
+    _token\x18\x04\x20\x01(\x0cR\tpageTokenB\0\x12\x1a\n\x07reverse\x18\x05\
+    \x20\x01(\x08R\x07reverseB\0B\x08\n\x06target:\0\"^\n\x0fUserDataRequest\
+    \x12\x12\n\x03fid\x18\x01\x20\x01(\x04R\x03fidB\0\x125\n\x0euser_data_ty\
+    pe\x18\x02\x20\x01(\x0e2\r.UserDataTypeR\x0cuserDataTypeB\0:\0\"2\n\x18N\
+    ameRegistryEventRequest\x12\x14\n\x04name\x18\x01\x20\x01(\x0cR\x04nameB\
+    \0:\0\"1\n\x19RentRegistryEventsRequest\x12\x12\n\x03fid\x18\x01\x20\x01\
+    (\x04R\x03fidB\0:\0\"\xbb\x01\n\x13OnChainEventRequest\x12\x12\n\x03fid\
+    \x18\x01\x20\x01(\x04R\x03fidB\0\x122\n\nevent_type\x18\x02\x20\x01(\x0e\
+    2\x11.OnChainEventTypeR\teventTypeB\0\x12\x1d\n\tpage_size\x18\x03\x20\
+    \x01(\rR\x08pageSizeB\0\x12\x1f\n\npage_token\x18\x04\x20\x01(\x0cR\tpag\
+    eTokenB\0\x12\x1a\n\x07reverse\x18\x05\x20\x01(\x08R\x07reverseB\0:\0\"k\
+    \n\x14OnChainEventResponse\x12'\n\x06events\x18\x01\x20\x03(\x0b2\r.OnCh\
+    ainEventR\x06eventsB\0\x12(\n\x0fnext_page_token\x18\x02\x20\x01(\x0cR\r\
+    nextPageTokenB\0:\0\"Z\n\x15StorageLimitsResponse\x12'\n\x06limits\x18\
+    \x01\x20\x03(\x0b2\r.StorageLimitR\x06limitsB\0\x12\x16\n\x05units\x18\
+    \x02\x20\x01(\rR\x05unitsB\0:\0\"\xd7\x01\n\x0cStorageLimit\x12+\n\nstor\
+    e_type\x18\x01\x20\x01(\x0e2\n.StoreTypeR\tstoreTypeB\0\x12\x14\n\x04nam\
+    e\x18\x02\x20\x01(\tR\x04nameB\0\x12\x16\n\x05limit\x18\x03\x20\x01(\x04\
+    R\x05limitB\0\x12\x14\n\x04used\x18\x04\x20\x01(\x04R\x04usedB\0\x12.\n\
+    \x11earliestTimestamp\x18\x05\x20\x01(\x04R\x11earliestTimestampB\0\x12$\
+    \n\x0cearliestHash\x18\x06\x20\x01(\x0cR\x0cearliestHashB\0:\0\".\n\x14U\
+    sernameProofRequest\x12\x14\n\x04name\x18\x01\x20\x01(\x0cR\x04nameB\0:\
+    \0\"D\n\x16UsernameProofsResponse\x12(\n\x06proofs\x18\x01\x20\x03(\x0b2\
+    \x0e.UserNameProofR\x06proofsB\0:\0\"G\n\x13VerificationRequest\x12\x12\
+    \n\x03fid\x18\x01\x20\x01(\x04R\x03fidB\0\x12\x1a\n\x07address\x18\x02\
+    \x20\x01(\x0cR\x07addressB\0:\0\"?\n\rSignerRequest\x12\x12\n\x03fid\x18\
+    \x01\x20\x01(\x04R\x03fidB\0\x12\x18\n\x06signer\x18\x02\x20\x01(\x0cR\
+    \x06signerB\0:\0\"o\n\x0bLinkRequest\x12\x12\n\x03fid\x18\x01\x20\x01(\
+    \x04R\x03fidB\0\x12\x1d\n\tlink_type\x18\x02\x20\x01(\tR\x08linkTypeB\0\
+    \x12!\n\ntarget_fid\x18\x03\x20\x01(\x04H\0R\ttargetFidB\0B\x08\n\x06tar\
+    get:\0\"\xa4\x01\n\x11LinksByFidRequest\x12\x12\n\x03fid\x18\x01\x20\x01\
+    (\x04R\x03fidB\0\x12\x1d\n\tlink_type\x18\x02\x20\x01(\tR\x08linkTypeB\0\
+    \x12\x1d\n\tpage_size\x18\x03\x20\x01(\rR\x08pageSizeB\0\x12\x1f\n\npage\
+    _token\x18\x04\x20\x01(\x0cR\tpageTokenB\0\x12\x1a\n\x07reverse\x18\x05\
+    \x20\x01(\x08R\x07reverseB\0:\0\"\xc0\x01\n\x14LinksByTargetRequest\x12!\
+    \n\ntarget_fid\x18\x01\x20\x01(\x04H\0R\ttargetFidB\0\x12\x1d\n\tlink_ty\
+    pe\x18\x02\x20\x01(\tR\x08linkTypeB\0\x12\x1d\n\tpage_size\x18\x03\x20\
+    \x01(\rR\x08pageSizeB\0\x12\x1f\n\npage_token\x18\x04\x20\x01(\x0cR\tpag\
+    eTokenB\0\x12\x1a\n\x07reverse\x18\x05\x20\x01(\x08R\x07reverseB\0B\x08\
+    \n\x06target:\0\"?\n\x1fIdRegistryEventByAddressRequest\x12\x1a\n\x07add\
+    ress\x18\x01\x20\x01(\x0cR\x07addressB\0:\0\"N\n\x13ContactInfoResponse\
+    \x125\n\x08contacts\x18\x01\x20\x03(\x0b2\x17.ContactInfoContentBodyR\
+    \x08contactsB\0:\0\"T\n\x12ValidationResponse\x12\x16\n\x05valid\x18\x01\
+    \x20\x01(\x08R\x05validB\0\x12$\n\x07message\x18\x02\x20\x01(\x0b2\x08.M\
+    essageR\x07messageB\0:\0*\xc0\x01\n\tStoreType\x12\x13\n\x0fSTORE_TYPE_N\
+    ONE\x10\0\x12\x14\n\x10STORE_TYPE_CASTS\x10\x01\x12\x14\n\x10STORE_TYPE_\
+    LINKS\x10\x02\x12\x18\n\x14STORE_TYPE_REACTIONS\x10\x03\x12\x18\n\x14STO\
+    RE_TYPE_USER_DATA\x10\x04\x12\x1c\n\x18STORE_TYPE_VERIFICATIONS\x10\x05\
+    \x12\x1e\n\x1aSTORE_TYPE_USERNAME_PROOFS\x10\x06\x1a\0B\0b\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;

@@ -30,8 +30,10 @@ impl State {
   pub fn new() -> Self {
     let key = gen_keys();
     let key_bytes = key.to_bytes();
-    Self { key: key_bytes,
-           active_fid: None }
+    Self {
+      key: key_bytes,
+      active_fid: None,
+    }
   }
 
   pub fn reset(&mut self) {
@@ -52,6 +54,10 @@ impl State {
     let bytes = bincode::serialize(self)?;
     set_state(&bytes);
     Ok(())
+  }
+  pub fn change_key(&self) -> Result<()> {
+    let n = State::new();
+    n.save()
   }
 }
 pub fn load_state() -> State {

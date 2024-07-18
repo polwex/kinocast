@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
-import { TimelineRes, UserRes, fetchTimeline } from "../logic/fetch/kinohub";
 import useGlobalState from "../logic/state/state";
 import "../components/feed.css";
 import {
@@ -9,6 +8,7 @@ import {
 } from "@tanstack/react-query";
 import spinner from "@/assets/icons/pacman.svg";
 import { PostList } from "../components/Feed";
+import { TimelineRes, fetchTimeline } from "../logic/fetch/kinode";
 
 export default function Timeline() {
   console.log("tl");
@@ -73,8 +73,7 @@ function Inner({
       threshold: 1.0,
     };
     const observer = new IntersectionObserver(cursorVisible, options);
-    if (cursorDiv.current)
-      observer.observe(cursorDiv.current);
+    if (cursorDiv.current) observer.observe(cursorDiv.current);
     // if (downCursor.current) observer.observe(downCursor.current);
     return () => observer.disconnect();
   }, [data.pages]);
@@ -89,7 +88,11 @@ function Inner({
         {data.pages.map((pag) => (
           <PostList key={pag.cursor} posts={pag.casts} />
         ))}
-        {loading ? <img className="ac" src={spinner} /> : <div ref={cursorDiv} />}
+        {loading ? (
+          <img className="ac" src={spinner} />
+        ) : data.pages[data.pages.length - 1]?.cursor !== 0 ? (
+          <div ref={cursorDiv} />
+        ) : null}
       </div>
     </>
   );

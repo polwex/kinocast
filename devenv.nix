@@ -3,6 +3,8 @@
 {
   # https://devenv.sh/basics/
   env.GREET = "devenv";
+  env.LIBCLANG_PATH = pkgs.lib.makeLibraryPath [pkgs.llvmPackages_latest.libclang.lib];
+  env.CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER= "${pkgs.gcc}/bin/gcc";
 
   # https://devenv.sh/packages/
   packages = with pkgs;[ 
@@ -11,7 +13,9 @@
     pkg-config
     clang
     cmake
-    # rustup
+    rustup
+    protobuf
+    nodePackages.typescript-language-server
   ];
 
   # https://devenv.sh/scripts/
@@ -32,7 +36,7 @@
   # services.postgres.enable = true;
 
   # https://devenv.sh/languages/
-  languages.rust.enable = true;
+  # languages.rust.enable = true;
   languages.javascript = {
     enable = true;
     npm.enable = true;

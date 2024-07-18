@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import left from "../assets/icons/left.svg";
 import {
+  PID,
   Post as PostT,
   ProfileBunt,
   UserProfile,
@@ -10,63 +11,69 @@ import Composer from "../modals/Composer";
 import "./feed.css";
 import spinner from "../assets/icons/ring-spin.svg";
 
-import {
-  FullCastRes,
-  UserRes,
-  userCasts,
-  userChannels,
-  userLikes,
-} from "../logic/fetch/kinohub";
+import { userCasts, userChannels, userLikes } from "../logic/fetch/kinohub";
 import useGlobalState, { useHistory } from "../logic/state/state";
 import { InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
-import { ChannelRes, UserChannelsRes, checkFidFname, checkFnameAvailable } from "../logic/fetch/warpcast";
+import {
+  ChannelRes,
+  UserChannelsRes,
+  checkFidFname,
+  checkFnameAvailable,
+} from "../logic/fetch/warpcast";
 import { castsByFid } from "../logic/fetch/hub";
+import {
+  ChannelsRes,
+  FullCastRes,
+  LikesRes,
+  UserRes,
+  fetchUserChannels,
+  fetchUserFeed,
+  fetchUserReactions,
+} from "../logic/fetch/kinode";
 
 export type FeedType = "casts" | "replies" | "likes" | "channels";
 
-export function FeedLoader({ name, fid}: { name: string, fid?: number }) {
+export function FeedLoader({ name, fid }: { name: string; fid?: number }) {
+  console.log([name, fid], "feed loader");
   const [error, setError] = useState(false);
-  const [ffid, setFid] = useState<number| undefined>(fid);
+  const [ffid, setFid] = useState<number | undefined>(fid);
 
   useEffect(() => {
-    checkFnameAvailable(name).then(r => {
-      if (r.length === 0) setError(true)
+    checkFnameAvailable(name).then((r) => {
+      if (r.length === 0) setError(true);
       else {
         const last = r[r.length - 1];
         const { fid } = last;
         setFid(fid);
       }
-    })
-  }, [name])
+    });
+  }, [name]);
 
-  if (error) return (
-    <div>
-      <h3>404</h3>
-      <p>No feed found belonging to username @{name}</p>
-    </div>
-  )
-  else if (ffid) return <Feed fid={ffid} />
-  else return <img className="agc" src={spinner} />
+  if (error)
+    return (
+      <div>
+        <h3>404</h3>
+        <p>No feed found belonging to username @{name}</p>
+      </div>
+    );
+  else if (ffid) return <Feed fid={ffid} />;
+  else return <img className="agc" src={spinner} />;
 }
 
-
 function Feed({ fid }: { fid: number }) {
-  console.log(fid, "feed fid")
+  console.log(fid, "feed fid");
   const [feedType, setft] = useState<FeedType>("casts");
 
   async function init({ pageParam }: { pageParam: any }) {
     const start = Date.now();
-    const rpc = await castsByFid(fid)
-    console.log(rpc.messages.length, "rpc length")
-
     const res =
       feedType === "casts"
-        ? userCasts(fid, pageParam)
+        ? fetchUserFeed(fid, pageParam)
         : feedType === "replies"
-          ? userCasts(fid, pageParam, true)
+          ? fetchUserFeed(fid, pageParam, true)
           : feedType === "likes"
-            ? userLikes(fid, pageParam)
-            : userChannels(fid, pageParam);
+            ? fetchUserReactions(fid, pageParam)
+            : fetchUserChannels(fid, pageParam);
     console.log(Date.now() - start, "elapsed");
     return await res;
   }
@@ -85,13 +92,12 @@ function Feed({ fid }: { fid: number }) {
     queryFn: init,
     initialPageParam: Date.now(),
     getNextPageParam: (lastPage, _pages) =>
-      "cursor" in lastPage ? lastPage.cursor : lastPage.next.cursor,
+      "cursor" in lastPage ? lastPage.cursor : "",
   });
   useEffect(() => {
-    console.log(feedType, "feed type")
+    console.log(feedType, "feed type");
     refetch();
-  }, [feedType])
-
+  }, [feedType]);
 
   if (isLoading) return <img className="agc big-spin" src={spinner} />;
   else
@@ -112,20 +118,20 @@ function Inner({
   fetchNext,
   loading,
   feed,
-  setFeed
+  setFeed,
 }: {
-  data: InfiniteData<UserRes | UserChannelsRes, any>;
+  data: InfiniteData<UserRes | LikesRes | ChannelsRes>;
   refetch: Function;
   fetchNext: Function;
   loading: boolean;
   feed: FeedType;
-  setFeed: Function
+  setFeed: Function;
 }) {
+  console.log(data, "data");
   useEffect(() => {
-    const first: any = data.pages[0];
-    console.log(first, "first")
-    console.log(first!.casts!.length, "length");
-    if (first && "cursor" in first) setProf(first.profile);
+    const first = data.pages[0];
+    console.log(first, "first");
+    if (first && "feed" in first) setProf(first.feed.profile);
   }, [data.pages]);
   const [profile, setProf] = useState<UserProfile>(ProfileBunt);
 
@@ -178,10 +184,12 @@ function Inner({
       </div>
       <div id="feed">
         {data.pages.map((pag) =>
-          "cursor" in pag ? (
-            <PostList key={pag.cursor} posts={pag.casts} />
+          "likes" in pag ? (
+            <LikesList key={pag.cursor} pids={pag.likes} />
+          ) : "feed" in pag ? (
+            <PostList key={pag.feed.cursor} posts={pag.feed.casts} />
           ) : (
-            <ChannelList key={pag.next.cursor} chans={pag.result.channels} />
+            <ChannelList key={pag.cursor} chans={pag.chans} />
           ),
         )}
         {loading ? (
@@ -203,6 +211,16 @@ function Inner({
 //   //   <PostList posts={likes} />
 //   <ChannelList data={channels} />
 // )}
+const profileBunt: UserProfile = {
+  pfp: "",
+  displayname: "",
+  username: "",
+  bio: "",
+  fid: 0,
+  url: "",
+  follows: 0,
+  followers: 0,
+};
 export function PostList({ posts }: { posts: FullCastRes[] }) {
   posts.sort(
     (a, b) =>
@@ -211,9 +229,10 @@ export function PostList({ posts }: { posts: FullCastRes[] }) {
   );
   return (
     <>
-      {posts.map((p) => (
-        <Post key={JSON.stringify(p)} post={p} />
-      ))}
+      {posts.map((p) => {
+        const ps = p.author ? p : { ...p, author: profileBunt };
+        return <Post key={JSON.stringify(p)} post={ps} />;
+      })}
     </>
   );
 }
@@ -228,7 +247,7 @@ export function ChannelList({ chans }: { chans: ChannelRes[] }) {
   );
 }
 function UserInfo({ data }: { data: UserProfile }) {
-  const {history, navigate} = useHistory();
+  const { history, navigate } = useHistory();
   const { fid, displayname, username, pfp, bio, url, follows, followers } =
     data;
   // console.log(data, "data");
@@ -243,8 +262,8 @@ function UserInfo({ data }: { data: UserProfile }) {
     const opts = { width: "60%" };
     setModal(<Composer />, opts);
   }
-  function openUserMenu() { }
-  function enlargenProfile() { }
+  function openUserMenu() {}
+  function enlargenProfile() {}
   function gotoFollows() {
     navigate(`/f/${fid}/following`);
   }
@@ -252,7 +271,7 @@ function UserInfo({ data }: { data: UserProfile }) {
     navigate(`/f/${fid}/followers`);
   }
   function doLogout() {
-    const res = logout()
+    const res = logout();
   }
   return (
     <div>
@@ -271,10 +290,11 @@ function UserInfo({ data }: { data: UserProfile }) {
               <div className="bio-name">{displayname}</div>
               <div className="bio-uname">@{username}</div>
             </div>
-            {fid == our
-              ? <button onClick={doLogout}>Logout</button>
-              : <button onClick={openUserMenu}>...</button>
-            }
+            {fid == our ? (
+              <button onClick={doLogout}>Logout</button>
+            ) : (
+              <button onClick={openUserMenu}>...</button>
+            )}
           </div>
           <p id="bio-text">{bio} </p>
           <div id="counts">
@@ -292,3 +312,7 @@ function UserInfo({ data }: { data: UserProfile }) {
 }
 
 export default Feed;
+
+function LikesList({ pids }: { pids: PID[] }) {
+  return <div></div>;
+}

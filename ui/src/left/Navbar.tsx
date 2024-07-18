@@ -1,4 +1,4 @@
-import { BASE_URL, versionNum } from "../logic/constants";
+import { versionNum } from "../logic/constants";
 import home from "@/assets/icons/oldhome.svg";
 import profile from "@/assets/icons/head.svg";
 import dms from "@/assets/icons/chat.svg";
@@ -7,10 +7,8 @@ import logo from "@/assets/logo.jpg";
 import gear from "@/assets/icons/settings.svg";
 import { currentPeers, info } from "../logic/fetch/hub";
 import useGlobalState, { useHistory } from "../logic/state/state";
-import { logout } from "../logic/fetch/kinode";
-import { UserProfile } from "../logic/types/farcaster";
 
-export default function() {
+export default function () {
   const { prof } = useGlobalState();
   const { navigate } = useHistory();
   function goto(s: string) {
@@ -29,15 +27,17 @@ export default function() {
   return (
     <div id="left-menu">
       <div id="logo">
-        <a onClick={() => navigate("/kc:kinocast:sortugdev.os")}>
+        <a onClick={() => goto("/")}>
           <img src={logo} />
         </a>
-        <a onClick={() => navigate("/kc:kinocast:sortugdev.os")}>
-          <h4>Kinocast <span>{versionNum}</span></h4>
+        <a onClick={() => goto("/")}>
+          <h4>
+            Kinocast <span>{versionNum}</span>
+          </h4>
         </a>
       </div>
       <div id="opts">
-        <div className="opt" role="link" onClick={() => goto("/timeline")}>
+        <div className="opt" role="link" onClick={() => goto("/")}>
           <img src={home} alt="" />
           <p>Timeline</p>
         </div>
@@ -45,19 +45,27 @@ export default function() {
           <img src={prof ? prof.pfp : profile} alt="" />
           <p>Profile</p>
         </div>
-        <div className="opt disabled" role="link" onClick={() => goto("/notifications")}>
+        <div
+          className="opt disabled"
+          role="link"
+          onClick={() => goto("/notifications")}
+        >
           <img src={notes} alt="" />
           <p>Notifications</p>
         </div>
         <div
           className="opt disabled"
           role="link"
-        // onClick={() => navigate("chat")}
+          // onClick={() => navigate("chat")}
         >
           <img src={dms} alt="" />
           <p>DMs</p>
         </div>
-        <div className="opt disabled" role="link" onClick={() => goto("/settings")}>
+        <div
+          className="opt disabled"
+          role="link"
+          onClick={() => goto("/settings")}
+        >
           <img src={gear} alt="" />
           <p>Settings</p>
         </div>

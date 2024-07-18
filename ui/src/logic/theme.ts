@@ -1,10 +1,9 @@
-import { createContext, useContext, useState } from 'react';
-
+import { createContext, useContext, useState } from "react";
 
 export function setTheme2() {
   const wantsDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  if (wantsDark) document.documentElement.setAttribute('data-theme', "dark")
-  else document.documentElement.setAttribute('data-theme', "light")
+  if (wantsDark) document.documentElement.setAttribute("data-theme", "dark");
+  else document.documentElement.setAttribute("data-theme", "light");
 }
 
 export function toggleTheme() {
@@ -14,10 +13,10 @@ export function toggleTheme() {
   // document.documentElement.setAttribute('data-theme', nextTheme)
 }
 
-export type Theme = "default" | "light" | "dark"
+export type Theme = "default" | "light" | "dark";
 const ThemeContext = createContext({
   theme: "dark",
-  setTheme: (theme: Theme) => { }
+  setTheme: (theme: Theme) => {},
 });
 
 // export const ThemeProvider = ({ children }) => {
@@ -34,6 +33,6 @@ const ThemeContext = createContext({
 // };
 
 export const useTheme = () => {
-  const context = useContext(ThemeContext)
-  return context
+  const context = useContext(ThemeContext);
+  return context;
 };

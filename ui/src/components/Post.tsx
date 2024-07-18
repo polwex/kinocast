@@ -1,16 +1,30 @@
 import reply from "../assets/icons/reply.svg";
 import bookmark from "../assets/icons/bookmark.svg";
 import like from "../assets/icons/heart.svg";
+import redheart from "../assets/icons/redheart.svg";
 import quote from "../assets/icons/quote.svg";
 import rt from "../assets/icons/retweet.svg";
 import rt2 from "../assets/icons/retweet2.svg";
 import menu from "../assets/icons/menu.svg";
 import { useEffect, useState } from "react";
-import { FullCastRes, fullThread } from "../logic/fetch/kinohub";
 import useGlobalState, { useHistory } from "../logic/state/state";
 import Composer from "../modals/Composer";
-import { scrapeURL, sendFrame, sendLike, sendRT } from "../logic/fetch/kinode";
-import { Fid, Frame as FrameT, FrameButton, OpenGraphTags } from "../logic/types/farcaster";
+import {
+  FullCastRes,
+  fetchEngagement,
+  fetchFullThread,
+  scrapeURL,
+  sendFrame,
+  sendLike,
+  sendRT,
+} from "../logic/fetch/kinode";
+import {
+  Fid,
+  Frame as FrameT,
+  FrameButton,
+  OpenGraphTags,
+  MessageData,
+} from "../logic/types/farcaster";
 import { useQuery } from "@tanstack/react-query";
 import { extractOpenGraph } from "../logic/frames";
 import { IMAGE_REGEX, URL_REGEX } from "../logic/constants";
@@ -27,16 +41,16 @@ import {
 } from "../logic/helpers";
 // import spinner from "../assets/icons/pacman.svg";
 import spinner from "../assets/icons/ring-spin.svg";
+import { reactionsByCast } from "../logic/fetch/hub";
 
 type PostType = FullCastRes;
 
 function Post(props: { post: PostType; quote?: boolean }) {
   const { post } = props;
-  const { navigate, history} = useHistory();
-  function openThread(e: React.MouseEvent){
-  const postHash = bytesToHash(post.cast.hash);
+  const { navigate, history } = useHistory();
+  function openThread(e: React.MouseEvent) {
     e.stopPropagation();
-    navigate(`/${post.author.username}/${postHash}`);
+    navigate(`/${post.author.username}/${post.cast.hash}`);
   }
   const quote = props.quote || false;
   if (quote)
@@ -62,11 +76,9 @@ function Post(props: { post: PostType; quote?: boolean }) {
 export default Post;
 
 export function Header({ post }: { post: PostType }) {
-  const postHash = bytesToHash(post.cast.hash);
-  // TODO fix this at origin
   const postTime = new Date(post.cast.timestamp);
 
-  const {history, navigate} = useHistory();
+  const { history, navigate } = useHistory();
   function openAuthor(e: React.MouseEvent) {
     // navigate(`/${post.author.username}`)
     e.stopPropagation();
@@ -76,7 +88,7 @@ export function Header({ post }: { post: PostType }) {
   function openThread(e: React.MouseEvent) {
     e.stopPropagation();
     // navigate(`/${post.author.username}/${postHash}`);
-    navigate(`/${post.author.fid}/${postHash}`);
+    navigate(`/${post.author.fid}/${post.cast.hash}`);
   }
   return (
     <header>
@@ -95,29 +107,37 @@ export function Header({ post }: { post: PostType }) {
   );
 }
 
-type Acc = {nodes: React.ReactNode[], text: string}
+type Acc = { nodes: React.ReactNode[]; text: string };
 export function Body({ post, quote }: { post: PostType; quote?: boolean }) {
   const urls = post.cast.text.match(URL_REGEX) || [];
-  const text = Array.from(urls).reduce((acc: Acc, item: string, i) => {
-    const sp = acc.text.split(item);
-    // const key = `${item}${i}`;
-    let textNode = <span>{sp[0]}</span>
-    let urlNode = <a href={item}>{abbreviate(item, 40)}</a>
-    const nodes = [...acc.nodes, textNode, urlNode];
-    const text = sp.slice(1).join("");
-    return {nodes, text}
-    
-  }, {nodes: [], text: post.cast.text})
+  const text = Array.from(urls).reduce(
+    (acc: Acc, item: string, i) => {
+      const sp = acc.text.split(item);
+      // const key = `${item}${i}`;
+      let textNode = <span>{sp[0]}</span>;
+      let urlNode = <a href={item}>{abbreviate(item, 40)}</a>;
+      const nodes = [...acc.nodes, textNode, urlNode];
+      const text = sp.slice(1).join("");
+      return { nodes, text };
+    },
+    { nodes: [], text: post.cast.text },
+  );
   return (
     <div className="trill-post-body body">
-      <div className="body-text">{text.nodes}
+      <div className="body-text">
+        {text.nodes}
         <p>{text.text}</p>
-        </div>
+      </div>
       {!quote && (
         <div className="body-embeds">
-          {post.cast.embeds.map((e, i) =>
+          {post.cast.embeds.map((e, i): any =>
             "Url" in e ? (
-              <URLEmbed key={JSON.stringify(e) + i} url={e.Url} fid={post.cast.fid} hash={bytesToHash(post.cast.hash)} />
+              <URLEmbed
+                key={JSON.stringify(e) + i}
+                url={e.Url}
+                fid={post.cast.fid}
+                hash={post.cast.hash}
+              />
             ) : "CastId" in e ? (
               <QuoteLoader key={i} fid={e.CastId.fid} hash={e.CastId.hash} />
             ) : null,
@@ -128,7 +148,7 @@ export function Body({ post, quote }: { post: PostType; quote?: boolean }) {
   );
 }
 
-function URLEmbed(props: { url: string, fid: number, hash: string }) {
+function URLEmbed(props: { url: string; fid: number; hash: string }) {
   const [frame, setFrame] = useState<FrameT>();
   const [og, setOg] = useState<OpenGraphTags>();
   const [img, setImg] = useState("");
@@ -137,42 +157,66 @@ function URLEmbed(props: { url: string, fid: number, hash: string }) {
     // "https://superrare.com/0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0/head-in-profile-31786";
     if (props.url.match(IMAGE_REGEX)) {
       setImg(props.url);
-      return
+      return;
     }
     const res = await scrapeURL(props.url);
-    if ("HTML" in res){
+    if ("HTML" in res) {
       const f = extractOpenGraph(res.HTML, props.url);
       if ("frame" in f) setFrame(f.frame);
       else if ("og" in f) setOg(f.og);
-    } else if ("Image" in res) setImg(res.Image)
+    } else if ("Image" in res) setImg(res.Image);
   }
 
   useEffect(() => {
     run();
   }, [props.url]);
   // <img key={i + e.Url} src={e.Url} />
-  if (frame) return (<Frame frame={frame} {...props} />)
-  else if (og) return (<Og og={og} {...props} />)
-  else if (img) return (<a href={img} target="_blank"><img src={img} /></a>)
-  else return <a className="url" href={props.url}>{props.url}</a>;
+  if (frame) return <Frame frame={frame} {...props} />;
+  else if (og) return <Og og={og} {...props} />;
+  else if (img)
+    return (
+      <a href={img} target="_blank">
+        <img src={img} />
+      </a>
+    );
+  else
+    return (
+      <a className="url" href={props.url}>
+        {props.url}
+      </a>
+    );
 }
 
-export function Og({ og, fid, hash }: { og: OpenGraphTags, fid: number, hash: string }) {
-
+export function Og({
+  og,
+  fid,
+  hash,
+}: {
+  og: OpenGraphTags;
+  fid: number;
+  hash: string;
+}) {
   return (
     <a href={og.url} className="opengraph">
-    {og.title}
-    <div className="enclosure">
-      <img src={og.image.url} alt={og.description || ""}/>
-      {og.audio && <audio src={og.audio.url} controls/>}
-      {og.video && <video src={og.video.url} controls/>}
-      <div className="site-name">{og.site_name || ""}</div>
-    </div>
-  </a>
-  )
-
+      {og.title}
+      <div className="enclosure">
+        <img src={og.image.url} alt={og.description || ""} />
+        {og.audio && <audio src={og.audio.url} controls />}
+        {og.video && <video src={og.video.url} controls />}
+        <div className="site-name">{og.site_name || ""}</div>
+      </div>
+    </a>
+  );
 }
-export function Frame({ frame, fid, hash }: { frame: FrameT, fid: number, hash: string }) {
+export function Frame({
+  frame,
+  fid,
+  hash,
+}: {
+  frame: FrameT;
+  fid: number;
+  hash: string;
+}) {
   const { prof } = useGlobalState();
   const our = prof!.fid;
   // TODO show the original url as warpcast?
@@ -180,13 +224,19 @@ export function Frame({ frame, fid, hash }: { frame: FrameT, fid: number, hash: 
     const postUrl = b.target || b.postUrl || frame.postURL || frame.embedURL;
     if (b.action === "post" || b.action === "post_redirect")
       buttonPost(postUrl, idx + 1, b.action === "post_redirect");
-    else if (b.action === "link") buttonLink(b!.target!)
-    else if (b.action === "mint") buttonMint(b!.target!)
-    else if (b.action === "tx") buttonTx(b!.target!, b.postUrl!, idx + 1)
+    else if (b.action === "link") buttonLink(b!.target!);
+    else if (b.action === "mint") buttonMint(b!.target!);
+    else if (b.action === "tx") buttonTx(b!.target!, b.postUrl!, idx + 1);
   }
-  async function buttonPost(url: string, buttonIndex: number, redirect: boolean) {
+  async function buttonPost(
+    url: string,
+    buttonIndex: number,
+    redirect: boolean,
+  ) {
     const body = {
-      fid, url, buttonIndex,
+      fid,
+      url,
+      buttonIndex,
       state: frame.state,
       inputText: frame.inputText,
       transactionId: "",
@@ -194,21 +244,27 @@ export function Frame({ frame, fid, hash }: { frame: FrameT, fid: number, hash: 
       messageHash: "",
       network: 1,
       timestamp: Date.now(),
-      castId: { fid, hash }
-    }
+      castId: { fid, hash },
+    };
     const res = await sendFrame(body);
     // if (res)
   }
   async function buttonLink(target: string) {
     // TODO redirect or fetch?
-    window.open(target, "_blank")
+    window.open(target, "_blank");
   }
   async function buttonMint(target: string) {
     // mint with wallet
   }
-  async function buttonTx(target: string, postURL: string, buttonIndex: number) {
+  async function buttonTx(
+    target: string,
+    postURL: string,
+    buttonIndex: number,
+  ) {
     const body = {
-      fid, url: target, buttonIndex,
+      fid,
+      url: target,
+      buttonIndex,
       state: frame.state,
       inputText: frame.inputText,
       transactionId: "",
@@ -216,24 +272,27 @@ export function Frame({ frame, fid, hash }: { frame: FrameT, fid: number, hash: 
       messageHash: "",
       network: 1,
       timestamp: Date.now(),
-      castId: { fid, hash }
-    }
+      castId: { fid, hash },
+    };
     const res = await sendFrame(body);
     // TODO see details here for what follows
-    // https://docs.farcaster.xyz/reference/frames/spec    
+    // https://docs.farcaster.xyz/reference/frames/spec
   }
   return (
-    <div><div className="tc smol">Frame</div>
+    <div>
+      <div className="tc smol">Frame</div>
       <div className="frame">
         <img src={frame.image} />
         <div className="frame-buttons">
           {frame.buttons.map((b, i) => (
-            <button key={JSON.stringify(b)} onClick={() => buttonAction(b, i)}>{b.text}</button>
+            <button key={JSON.stringify(b)} onClick={() => buttonAction(b, i)}>
+              {b.text}
+            </button>
           ))}
         </div>
       </div>
     </div>
-  )
+  );
 }
 export function QuoteLoader(
   { fid, hash }: any,
@@ -241,7 +300,7 @@ export function QuoteLoader(
 ) {
   async function fetchCast() {
     const postHash = bytesToHash(hash);
-    const res = await fullThread(postHash);
+    const res = await fetchFullThread(postHash);
     return res;
   }
   // TODO
@@ -301,9 +360,33 @@ export function QuoteLoader(
   // );
 }
 
+export function Footer(props: { post: PostType }) {
+  const { post } = props;
+  const { isLoading, data } = useQuery({
+    queryKey: ["engagement", post.cast.fid, post.cast.hash],
+    queryFn: () => reactionsByCast(post.cast.fid, post.cast.hash),
+  });
+  if (!data) return <div>...</div>;
+  else return <FooterInner {...props} reactions={data.messages} />;
+}
 
-
-export function Footer({ post }: { post: PostType }) {
+export function FooterInner({
+  post,
+  reactions,
+}: {
+  post: PostType;
+  reactions: MessageData<"MESSAGE_TYPE_REACTION_ADD">[];
+}) {
+  const { prof } = useGlobalState();
+  const engBunt: { likes: Fid[]; rts: Fid[] } = {
+    likes: [],
+    rts: [],
+  };
+  const eng = reactions.reduce((acc, item) => {
+    if (item.data.reactionBody.type === "REACTION_TYPE_LIKE")
+      return { ...acc, likes: [...acc.likes, item.data.fid] };
+    else return { ...acc, rts: [...acc.rts, item.data.fid] };
+  }, engBunt);
   const { setModal } = useGlobalState();
   const reposting = false;
   const myRP = false;
@@ -311,7 +394,7 @@ export function Footer({ post }: { post: PostType }) {
   function doReply(e: React.MouseEvent) {
     e.stopPropagation();
     const opts = { width: "60%" };
-    const pid = { fid: post.author.fid, hash: bytesToHash(post.cast.hash) };
+    const pid = { fid: post.author.fid, hash: post.cast.hash };
     setModal(<Composer replying_to={pid} />, opts);
   }
   function doQuote(e: React.MouseEvent) {
@@ -326,13 +409,13 @@ export function Footer({ post }: { post: PostType }) {
   }
   async function sendRP(e: React.MouseEvent) {
     e.stopPropagation();
-    const postHash = bytesToHash(post.cast.hash);
+    const postHash = post.cast.hash;
     const pid = { fid: post.author.fid, hash: postHash.slice(2) };
     const res = await sendRT(pid);
   }
   async function doLike(e: React.MouseEvent) {
     e.stopPropagation();
-    const postHash = bytesToHash(post.cast.hash);
+    const postHash = post.cast.hash;
     const pid = { fid: post.author.fid, hash: postHash.slice(2) };
     const res = await sendLike(pid);
   }
@@ -350,7 +433,7 @@ export function Footer({ post }: { post: PostType }) {
         <span
           role="link"
 
-        // onMouseUp={showReplyCount} className="reply-count"
+          // onMouseUp={showReplyCount} className="reply-count"
         >
           {abbreviateNumber(post.reply_count)}
         </span>
@@ -359,16 +442,16 @@ export function Footer({ post }: { post: PostType }) {
       <div className="icon">
         <span
           role="link"
-        // onMouseUp={showQuoteCount} className="quote-count"
+          // onMouseUp={showQuoteCount} className="quote-count"
         ></span>
         <img role="link" onMouseUp={doQuote} src={quote} alt="" />
       </div>
       <div className="icon">
         <span
           role="link"
-        // onMouseUp={showRepostCount} className="repost-count"
+          // onMouseUp={showRepostCount} className="repost-count"
         >
-          {abbreviateNumber(post.rts.length)}
+          {abbreviateNumber(eng.rts.length)}
         </span>
         {reposting ? (
           <p>...</p>
@@ -387,23 +470,27 @@ export function Footer({ post }: { post: PostType }) {
       <div className="icon">
         <span
           role="link"
-        // onMouseUp={showQuoteCount} className="quote-count"
+          // onMouseUp={showQuoteCount} className="quote-count"
         >
-          {abbreviateNumber(post.likes.length)}
+          {abbreviateNumber(eng.likes.length)}
         </span>
-        <img role="link" onMouseUp={doLike} src={like} alt="" />
+        {eng.likes.includes(prof!.fid) ? (
+          <img role="link" onMouseUp={doLike} src={redheart} alt="" />
+        ) : (
+          <img role="link" onMouseUp={doLike} src={like} alt="" />
+        )}
       </div>
       <div className="icon">
         <span
           role="link"
-        // onMouseUp={showQuoteCount} className="quote-count"
+          // onMouseUp={showQuoteCount} className="quote-count"
         ></span>
         <img role="link" onMouseUp={doBookmark} src={bookmark} alt="" />
       </div>
       <div className="icon">
         <span
           role="link"
-        // onMouseUp={showQuoteCount} className="quote-count"
+          // onMouseUp={showQuoteCount} className="quote-count"
         ></span>
         <img role="link" onMouseUp={openMenu} src={menu} alt="" />
       </div>

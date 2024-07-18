@@ -1,9 +1,10 @@
 // standard Hubble API requests
 
-import { PG_URL, RPC_URL, RetardedTime } from "../constants";
+import { PG_URL, HUB_URL, RetardedTime } from "../constants";
 import {
   Fid,
   FidsRes,
+  HubResponse,
   UserDataRequestType,
   UserNameByFidRes,
   UserNameRes,
@@ -23,8 +24,10 @@ export async function castById(fid: Fid, hash: string) {
   const path = `v1/castById?fid=${fid}&hash=${hash}`;
   return goFetch(path);
 }
-export async function castsByFid(fid: Fid) {
-  const path = `v1/castsByFid?fid=${fid}`;
+export async function castsByFid(fid: Fid, cursor: string) {
+  const path = cursor
+    ? `v1/castsByFid?reverse=1&fid=${fid}&pageToken=${cursor}`
+    : `v1/castsByFid?reverse=1&fid=${fid}`;
   return goFetch(path);
 }
 export async function castsByParent(fid: Fid, hash: string) {
@@ -56,8 +59,11 @@ export async function likesByFid(fid: number) {
   return reactionsByFid(fid, 1);
 }
 
-export async function reactionsByCast(fid: number, reactionType: string) {
-  const path = `v1/reactionsByCast?fid=${fid}&reaction_type=${reactionType}`;
+export async function reactionsByCast(
+  fid: number,
+  hash: string,
+): Promise<HubResponse<"MESSAGE_TYPE_REACTION_ADD">> {
+  const path = `v1/reactionsByCast?target_fid=${fid}&target_hash=${hash.slice(2)}`;
   return goFetch(path);
 }
 export async function reactionsByTarget(url: string, reactionType: string) {
@@ -141,6 +147,6 @@ export async function usernameProofsByFid(fid: Fid): Promise<UserNameByFidRes> {
 async function goFetch(path: string) {
   // const res = await fetch(`https://${url}/${path}`);
   // const u = `http://${url}:${httpPort}/${path}`;
-  const res = await fetch(`${RPC_URL}/${path}`);
+  const res = await fetch(`${HUB_URL}/${path}`);
   return res.json();
 }

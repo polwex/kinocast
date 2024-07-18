@@ -1,7 +1,10 @@
 use anyhow::{anyhow, Result};
+use kinode_process_lib::println;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+
+use crate::hub::from_farcaster_time;
 
 #[derive(Debug)]
 pub enum Errors {
@@ -44,6 +47,33 @@ pub struct Td {
   pub message_bytes: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub enum UIRes {
+  Ok(UIResInner),
+  Err { error: String },
+}
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub enum UIResInner {
+  Timeline {
+    casts: Vec<CastRes>,
+    cursor: u64,
+  },
+  Feed {
+    fid: u64,
+    casts: Vec<CastRes>,
+    profile: Option<Profile>,
+    cursor: u64,
+  },
+  Reactions {
+    fid: u64,
+    reactions: Vec<ReactionRes>,
+    cursor: u64,
+  },
+  Profile(Profile),
+  Proxy(HubResponse),
+}
 #[derive(Debug, Serialize, Deserialize)]
 pub enum UIPostRequest {
   IDLogin { id: String },
@@ -69,69 +99,58 @@ pub enum UIGetResponse {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Profile {
   fid: u64,
-  name: String,
+  displayname: String,
   username: String,
   bio: String,
   pfp: String,
   url: String,
 }
 impl Profile {
-  pub fn new(
-    fid: u64,
-    name: String,
-    username: String,
-    bio: String,
-    pfp: String,
-    url: String,
-  ) -> Self {
-    Self {
-      fid,
-      name,
-      username,
-      bio,
-      pfp,
-      url,
-    }
+  pub fn new(fid: u64,
+             displayname: String,
+             username: String,
+             bio: String,
+             pfp: String,
+             url: String)
+             -> Self {
+    Self { fid,
+           displayname,
+           username,
+           bio,
+           pfp,
+           url }
   }
   pub fn from_sqlite(map: &HashMap<String, Value>) -> Result<Self> {
-    let fid = map
-      .get("fid")
-      .and_then(|v| v.as_u64())
-      .ok_or_else(|| anyhow!("Missing or invalid 'id'"))? as u64;
-    let name = map
-      .get("name")
-      .and_then(|v| v.as_str())
-      .ok_or_else(|| anyhow::anyhow!("Missing or invalid 'name'"))?
-      .to_string();
-    let username = map
-      .get("username")
-      .and_then(|v| v.as_str())
-      .ok_or_else(|| anyhow::anyhow!("Missing or invalid 'name'"))?
-      .to_string();
-    let bio = map
-      .get("bio")
-      .and_then(|v| v.as_str())
-      .ok_or_else(|| anyhow::anyhow!("Missing or invalid 'name'"))?
-      .to_string();
-    let pfp = map
-      .get("pfp")
-      .and_then(|v| v.as_str())
-      .ok_or_else(|| anyhow::anyhow!("Missing or invalid 'name'"))?
-      .to_string();
-    let url = map
-      .get("url")
-      .and_then(|v| v.as_str())
-      .ok_or_else(|| anyhow::anyhow!("Missing or invalid 'name'"))?
-      .to_string();
+    let fid = map.get("fid")
+                 .and_then(|v| v.as_u64())
+                 .ok_or_else(|| anyhow!("Missing or invalid 'fid'"))? as u64;
+    let displayname = map.get("name")
+                         .and_then(|v| v.as_str())
+                         .ok_or_else(|| anyhow::anyhow!("Missing or invalid 'displayname'"))?
+                         .to_string();
+    let username = map.get("username")
+                      .and_then(|v| v.as_str())
+                      .ok_or_else(|| anyhow::anyhow!("Missing or invalid 'username'"))?
+                      .to_string();
+    let bio = map.get("bio")
+                 .and_then(|v| v.as_str())
+                 .ok_or_else(|| anyhow::anyhow!("Missing or invalid 'bio'"))?
+                 .to_string();
+    let pfp = map.get("pfp")
+                 .and_then(|v| v.as_str())
+                 .ok_or_else(|| anyhow::anyhow!("Missing or invalid 'pfp'"))?
+                 .to_string();
+    let url = map.get("url")
+                 .and_then(|v| v.as_str())
+                 .ok_or_else(|| anyhow::anyhow!("Missing or invalid 'url'"))?
+                 .to_string();
 
-    Ok(Profile {
-      fid,
-      name,
-      username,
-      bio,
-      pfp,
-      url,
-    })
+    Ok(Profile { fid,
+                 displayname,
+                 username,
+                 bio,
+                 pfp,
+                 url })
   }
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -220,33 +239,29 @@ pub struct UserDataBodyJson {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct EmbedJson {
-  #[serde(flatten)]
-  pub embed: Option<EmbedVariantJson>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum EmbedVariantJson {
+#[serde(rename_all = "camelCase")]
+pub enum CastRefJson {
   Url(String),
-  CastId(CastIdJson),
+  CastId { fid: u64, hash: String },
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CastAddBodyJson {
+  pub embeds: Vec<CastRefJson>,
   pub embeds_deprecated: Vec<String>,
   pub mentions: Vec<u64>,
-  pub text: String,
   pub mentions_positions: Vec<u32>,
-  pub embeds: Vec<EmbedJson>,
+  pub text: String,
   #[serde(flatten)]
   pub parent: Option<CastAddBodyParentJson>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(untagged)]
+// #[serde(untagged)]
+#[serde(rename_all = "camelCase")]
 pub enum CastAddBodyParentJson {
-  ParentCastId(CastIdJson),
+  ParentCastId { fid: u64, hash: String },
   ParentUrl(String),
 }
 
@@ -258,7 +273,7 @@ pub struct CastRemoveBodyJson {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CastIdJson {
   pub fid: u64,
-  pub hash: Vec<u8>,
+  pub hash: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -276,6 +291,7 @@ pub enum ReactionBodyTargetJson {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct VerificationAddAddressBodyJson {
   pub address: Vec<u8>,
   pub claim_signature: Vec<u8>,
@@ -292,12 +308,19 @@ pub struct VerificationRemoveBodyJson {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LinkBodyJson {
   pub r#type: String,
-  pub display_timestamp: Option<u32>,
-  #[serde(flatten)]
-  pub target: Option<LinkBodyTargetJson>,
+  pub target_fid: u64,
 }
+// #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+// #[serde(rename_all = "camelCase")]
+// pub struct LinkBodyJson {
+//   pub r#type: String,
+//   pub display_timestamp: Option<u32>,
+//   #[serde(flatten)]
+//   pub target: Option<LinkBodyTargetJson>,
+// }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -306,6 +329,7 @@ pub enum LinkBodyTargetJson {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FrameActionBodyJson {
   pub button_index: u32,
   pub cast_id: Option<CastIdJson>,
@@ -318,22 +342,124 @@ pub struct FrameActionBodyJson {
 // copied from kinohub
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CastRes {
+  pub author: Option<Profile>,
+  pub cast: CastT,
+  pub likes: Vec<ReactionRes>,
+  pub rts: Vec<ReactionRes>,
+  pub replies: Vec<CastRes>,
+  pub reply_count: usize,
+}
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ReactionRes {
+  pub fid: u64,
+  pub target_cast: String,
+  pub timestamp: u64,
+  pub taip: u64,
+}
+impl ReactionRes {
+  pub fn from_sqlite(map: &HashMap<String, Value>) -> Result<Self> {
+    let timestamp = map.get("created")
+                       .and_then(|v| v.as_u64())
+                       .ok_or_else(|| anyhow!("Missing or invalid 'cast author'"))?
+                    as u64;
+    let fid = map.get("author")
+                 .and_then(|v| v.as_i64())
+                 .ok_or_else(|| anyhow!("Missing or invalid 'cast author'"))? as u64;
+    let taip = map.get("type")
+                  .and_then(|v| v.as_i64())
+                  .ok_or_else(|| anyhow!("Missing or invalid 'cast author'"))?
+               as u64;
+    let target_cast = map.get("target_url")
+                         .and_then(|v| v.as_str())
+                         .ok_or_else(|| anyhow::anyhow!("Missing or invalid 'text'"))?
+                         .to_string();
+    Ok(ReactionRes { timestamp,
+                     fid,
+                     taip,
+                     target_cast })
+  }
+}
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CastT {
-  pub fid: i64,
+  pub fid: u64,
   pub author_name: String,
   pub hash: String,
   pub timestamp: u64,
   pub text: String,
-  pub embeds: Value,
-  pub mentions: Value,
-  pub mentions_positions: Value,
+  pub embeds: Vec<CastRefJson>,
+  pub mentions: Vec<u64>,
+  pub mentions_positions: Vec<u64>,
+  // pub embeds: Value,
+  // pub mentions: Value,
+  // pub mentions_positions: Value,
   pub parent_fid: Option<i64>,
   pub parent_hash: Option<String>,
   pub parent_url: Option<String>,
-  pub root_parent_hash: Option<Vec<String>>,
+  pub root_parent_hash: Option<String>,
   pub root_parent_url: Option<String>,
 }
 
+impl CastT {
+  pub fn from_sqlite(map: &HashMap<String, Value>) -> Result<Self> {
+    // println!("cast db res {:?}", map);
+    let fts = map.get("created")
+                 .and_then(|v| v.as_u64())
+                 .ok_or_else(|| anyhow!("Missing or invalid 'cast author'"))? as u64;
+    let timestamp = from_farcaster_time(fts);
+    let fid = map.get("author")
+                 .and_then(|v| v.as_u64())
+                 .ok_or_else(|| anyhow!("Missing or invalid 'cast author'"))? as u64;
+    let hash = map.get("hash")
+                  .and_then(|v| v.as_str())
+                  .ok_or_else(|| anyhow::anyhow!("Missing or invalid 'hash'"))?
+                  .to_string();
+    let text = map.get("text")
+                  .and_then(|v| v.as_str())
+                  .ok_or_else(|| anyhow::anyhow!("Missing or invalid 'text'"))?
+                  .to_string();
+    let vembeds = map.get("embeds")
+                     .and_then(|v| v.as_str())
+                     .ok_or_else(|| anyhow::anyhow!("Missing or invalid 'text'"))?
+                     .to_string();
+    let vmentions = map.get("mentions")
+                       .and_then(|v| v.as_str())
+                       .ok_or_else(|| anyhow::anyhow!("Missing or invalid 'text'"))?
+                       .to_string();
+    let vmentionps = map.get("mentions_positions")
+                        .and_then(|v| v.as_str())
+                        .ok_or_else(|| anyhow::anyhow!("Missing or invalid 'text'"))?
+                        .to_string();
+    // println!("vembeds {:?}", vembeds);
+    // let parsed = serde_sqlite_jsonb::from_bytes()
+    // let rembeds = serde_json::from_slice::<Vec<EmbedJson>>();
+    // println!("rembeds {:?}", rembeds);
+    let embeds = serde_json::from_str(&vembeds)?;
+    let mentions = serde_json::from_str(&vmentions)?;
+    let mentions_positions = serde_json::from_str(&vmentionps)?;
+
+    let author_name = "".to_string();
+    let parent_fid = None;
+    let parent_hash = None;
+    let parent_url = None;
+    let root_parent_hash = None;
+    let root_parent_url = None;
+
+    Ok(Self { fid,
+              author_name,
+              hash,
+              timestamp,
+              text,
+              embeds,
+              mentions,
+              mentions_positions,
+              parent_fid,
+              parent_hash,
+              parent_url,
+              root_parent_hash,
+              root_parent_url })
+  }
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 // #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum HashScheme {

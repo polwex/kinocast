@@ -36,7 +36,7 @@ import {
   http,
   webSocket,
 } from "viem";
-import { APP_FID, APP_PRIVATE_KEY,  RECOVERY_ADDRESS } from "../constants";
+import { APP_FID, APP_PRIVATE_KEY, RECOVERY_ADDRESS } from "../constants";
 import { HexString, UserProfile } from "../types/farcaster";
 import { Result, AResult } from "../types/sortug";
 import { mainnet, optimism } from "viem/chains";
@@ -87,23 +87,22 @@ import { getEnsName } from "viem/actions";
 
 export async function fetchEns(address: any) {
   const pc = createPublicClient({
-    chain: mainnet, transport: http()
-  })
+    chain: mainnet,
+    transport: http(),
+  });
   const res = await getEnsName(pc, { address });
-  return await res
-
+  return await res;
 }
 
 export async function createWallet(): Promise<WalletClient> {
-
-  const [account] = await changeWalletAddress(); 
+  const [account] = await changeWalletAddress();
   const wc = createWalletClient({
     account,
     chain: optimism,
-    transport: custom((window as any).ethereum)
+    transport: custom((window as any).ethereum),
   });
-  await wc.switchChain({id: optimism.id});
-  return wc
+  await wc.switchChain({ id: optimism.id });
+  return wc;
 }
 export async function connectToWallet(wc: WalletClient) {
   // const adrs =
@@ -115,27 +114,33 @@ export async function connectToWallet(wc: WalletClient) {
   // // console.log(res, "Res")
   // console.log(adrs, "adrs")
   // return adrs
-  return changeWalletAddress()
+  return changeWalletAddress();
 }
 
 export async function changeWalletAddress() {
-  const accounts = await (window as any).ethereum.request({
-    method: "wallet_requestPermissions",
-    params: [{
-      eth_accounts: {}
-    }]
-  }).then(() => (window as any).ethereum.request({
-    method: 'eth_requestAccounts'
-  }))
-  return accounts
+  const accounts = await (window as any).ethereum
+    .request({
+      method: "wallet_requestPermissions",
+      params: [
+        {
+          eth_accounts: {},
+        },
+      ],
+    })
+    .then(() =>
+      (window as any).ethereum.request({
+        method: "eth_requestAccounts",
+      }),
+    );
+  return accounts;
 }
-export type PublicClient = PPublicClient<any, any>
+export type PublicClient = PPublicClient<any, any>;
 export function createPc(): PublicClient {
   const pc = createPublicClient({
     chain: optimism,
-    transport: http()
+    transport: http(),
   });
-  return pc
+  return pc;
 }
 
 export function phraseWallet(phrase: string): Result<HDNodeWallet> {
@@ -150,6 +155,7 @@ export function phraseWallet(phrase: string): Result<HDNodeWallet> {
 
 export async function checkSigners(fid: number): AResult<HexString> {
   const signers = await onChainSignersByFid(fid, null);
+  console.log(signers, "signers");
   const pubkey = await fetchPubkey();
   if ("error" in pubkey)
     return { error: "couldn't retrieve kinode networking key" };
@@ -187,22 +193,30 @@ export function keyWallet(key: string) {
   return signer;
 }
 
-
-export async function signFname(name: string, owner: any, timestamp: number, signer: Signer): AResult<string> {
+export async function signFname(
+  name: string,
+  owner: any,
+  timestamp: number,
+  signer: Signer,
+): AResult<string> {
   const claim = makeUserNameProofClaim({
     name,
     owner,
-    timestamp
+    timestamp,
   });
   const signature = await signer.signUserNameProofClaim(claim);
-  if (signature.isErr()) return { error: "claim error" }
-  else return { ok: bytesToHex(signature.value) as string }
+  if (signature.isErr()) return { error: "claim error" };
+  else return { ok: bytesToHex(signature.value) as string };
 }
-export async function fnameFlow(name: string, fid: number, wc: WalletClient): AResult<string> {
+export async function fnameFlow(
+  name: string,
+  fid: number,
+  wc: WalletClient,
+): AResult<string> {
   const timestamp = Math.floor(Date.now() / 1000);
   const { signer, addr } = getWalletSigner(wc!);
   const signature = await signFname(name, addr, timestamp, signer);
-  if ("error" in signature) return { error: signature.error as any }
+  if ("error" in signature) return { error: signature.error as any };
   else if ("ok" in signature) {
     const body = {
       name,
@@ -211,14 +225,12 @@ export async function fnameFlow(name: string, fid: number, wc: WalletClient): AR
       fid,
       owner: addr,
       timestamp,
-      signature: signature.ok
+      signature: signature.ok,
     };
     const res = await registerFname(body);
   }
-  return { ok: "" }
-
+  return { ok: "" };
 }
-
 
 export function appAccount() {
   const account = privateKeyToAccount(APP_PRIVATE_KEY as any);
@@ -268,16 +280,15 @@ export async function registerFlow(
   publicClient: PublicClient,
   walletClient: WalletClient,
   proxy: HexString,
-
 ): AResult<"ok"> {
   const deadline = makeDeadline();
   const signature = await registerID(publicClient, walletClient, proxy);
   if ("error" in signature) return signature;
   const signingKey = await fetchPubkey();
-  if ("error" in signingKey) return signingKey
+  if ("error" in signingKey) return signingKey;
   const metadata = await getAppMeta(signingKey.ok);
-  console.log(metadata, "md")
-  if (!metadata.isOk()) return { error: "metadata error" }
+  console.log(metadata, "md");
+  if (!metadata.isOk()) return { error: "metadata error" };
   const signer = new ViemWalletEip712Signer(walletClient as any);
   const addSignature = await getUserSignature(
     publicClient,
@@ -298,17 +309,17 @@ export async function registerFlow(
     signingKey.ok,
     metadata.value,
   );
-  return { ok: "ok" }
-
+  return { ok: "ok" };
 }
 export async function setKeysFlow(
   publicClient: PublicClient,
   walletClient: WalletClient,
   address: HexString,
   pubkey: HexString,
-  signer: Signer): AResult<HexString> {
+  signer: Signer,
+): AResult<HexString> {
   const metadata = await getAppMeta(pubkey);
-  if (!metadata.isOk()) return { error: "metadata error" }
+  if (!metadata.isOk()) return { error: "metadata error" };
   const deadline = makeDeadline();
   const signature = await getUserSignature(
     publicClient,
@@ -318,7 +329,7 @@ export async function setKeysFlow(
     metadata.value,
     deadline,
   );
-  if (!signature.isOk()) return { error: "signature error" }
+  if (!signature.isOk()) return { error: "signature error" };
   const req = await setKeys(
     publicClient,
     address,
@@ -327,8 +338,15 @@ export async function setKeysFlow(
     signature.value,
     deadline,
   );
-  const res = await walletClient.writeContract(req);
-  return { ok: res }
+  console.log(req, "set keys request");
+  if ("error" in req) return req;
+  try {
+    const res = await walletClient.writeContract(req.ok);
+    return { ok: res };
+  } catch (e) {
+    console.log(e, "error setting keys");
+    return { error: "error setting keys" };
+  }
 }
 export async function setKeys(
   publicClient: PublicClient,
@@ -337,7 +355,7 @@ export async function setKeys(
   meta: Uint8Array,
   signature: Uint8Array,
   deadline: bigint,
-) {
+): AResult<any> {
   const metadata = bytesToHex(meta);
   const account = privateKeyToAccount(APP_PRIVATE_KEY as any);
   const payload = {
@@ -355,8 +373,12 @@ export async function setKeys(
       bytesToHex(signature),
     ] as any,
   };
-  const { request } = await publicClient.simulateContract(payload);
-  return request;
+  try {
+    const { request } = await publicClient.simulateContract(payload);
+    return { ok: request };
+  } catch (e) {
+    return { error: e as any };
+  }
 }
 
 export async function registerApp(
@@ -384,7 +406,6 @@ export async function registerApp(
   await walletClient.writeContract(request as any);
 }
 export async function checkFid(publicClient: PublicClient, address: HexString) {
-  // TODO this didn't quite work for me
   const fid = await publicClient.readContract({
     address: ID_REGISTRY_ADDRESS,
     abi: idRegistryABI,
@@ -442,7 +463,6 @@ export async function bundlerCall(
   const app = privateKeyToAccount(APP_PRIVATE_KEY as any);
   const recovery = recoveryProxy || RECOVERY_ADDRESS;
 
-
   const { request } = await publicClient.simulateContract({
     account: app,
     address: BUNDLER_ADDRESS,
@@ -465,11 +485,11 @@ export async function bundlerCall(
           sig: bytesToHex(addSignature),
         },
       ],
-      0n,
+      1n,
     ],
     value: price,
   });
-  console.log(request, "req")
+  console.log(request, "req");
   await client.writeContract(request);
 }
 

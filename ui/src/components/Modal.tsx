@@ -26,7 +26,6 @@ function Modal({
   }, [children]);
 
   function clickAway(e: React.MouseEvent) {
-    console.log("clicked away");
     e.stopPropagation();
     if (closable)
       if (!modalRef.current || !modalRef.current.contains(e.target as any))

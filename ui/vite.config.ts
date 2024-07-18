@@ -5,8 +5,8 @@ import path from "path";
 If you are developing a UI outside of a Kinode project,
 comment out the following 2 lines:
 */
-import manifest from "./manifest.json";
-import metadata from "./metadata.json";
+import manifest from "../pkg/manifest.json";
+import metadata from "../metadata.json";
 
 /*
 IMPORTANT:
@@ -19,6 +19,9 @@ export const BASE_URL = `/${manifest[0].process_name}:${metadata.properties.pack
 export const PROXY_URL = (
   process.env.VITE_NODE_URL || "http://127.0.0.1:8095"
 ).replace("localhost", "127.0.0.1");
+
+console.log("base url", BASE_URL);
+console.log("process.env.VITE_NODE_URL", process.env.VITE_NODE_URL, PROXY_URL);
 
 export default defineConfig({
   plugins: [react()],

@@ -4,9 +4,9 @@ import NewRouter from "./NewRouter";
 function App() {
   const queryClient = new QueryClient();
   return (
-      <QueryClientProvider client={queryClient}>
-        <NewRouter />
-      </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <NewRouter />
+    </QueryClientProvider>
   );
 }
 

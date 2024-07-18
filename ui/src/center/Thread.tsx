@@ -10,32 +10,39 @@ import { bytesToHash } from "../logic/helpers";
 import { checkFnameAvailable } from "../logic/fetch/warpcast";
 import { useHistory } from "../logic/state/state";
 
-
-export function ThreadLoader({ name, hash, fid}: { name: string, hash: string, fid?: number }) {
+export function ThreadLoader({
+  name,
+  hash,
+  fid,
+}: {
+  name: string;
+  hash: string;
+  fid?: number;
+}) {
   const [error, setError] = useState(false);
-  const [ffid, setFid] = useState<number| undefined>(fid);
+  const [ffid, setFid] = useState<number | undefined>(fid);
 
   useEffect(() => {
-    checkFnameAvailable(name).then(r => {
-      if (r.length === 0) setError(true)
+    checkFnameAvailable(name).then((r) => {
+      if (r.length === 0) setError(true);
       else {
         const last = r[r.length - 1];
         const { fid } = last;
         setFid(fid);
       }
-    })
-  }, [name])
+    });
+  }, [name]);
 
-  if (error) return (
-    <div>
-      <h3>404</h3>
-      <p>No Post found with hash {hash}</p>
-    </div>
-  )
-  else if (ffid) return <Thread fid={ffid} hash={hash} />
-  else return <img className="agc" src={spinner} />
+  if (error)
+    return (
+      <div>
+        <h3>404</h3>
+        <p>No Post found with hash {hash}</p>
+      </div>
+    );
+  else if (ffid) return <Thread fid={ffid} hash={hash} />;
+  else return <img className="agc" src={spinner} />;
 }
-
 
 function extractThread(t: ThreadRes) {
   const zhu = t.cast.fid;
@@ -49,7 +56,6 @@ function extractThread(t: ThreadRes) {
 }
 
 function Thread({ fid, hash }: { fid: number; hash: string }) {
-  
   async function fetchCast() {
     const res = await fullThread(hash);
     return res;
@@ -65,7 +71,7 @@ function Thread({ fid, hash }: { fid: number; hash: string }) {
 export default Thread;
 
 function Inner({ data, refetch }: { data: ThreadRes; refetch: Function }) {
-  const {history, navigate} = useHistory();
+  const { history, navigate } = useHistory();
   const postData: FullCastRes = { ...data, reply_count: data.replies.length };
 
   function goback() {

@@ -1,27 +1,28 @@
 import { Fid, FnameTransfer } from "../types/farcaster";
 
-
 // fnames
-export async function checkFidFname(fid: number): Promise<FnameTransfer[]>{
-  const path = `https://fnames.farcaster.xyz/transfers?fid=${fid}`
+export async function checkFidFname(fid: number): Promise<FnameTransfer[]> {
+  const path = `https://fnames.farcaster.xyz/transfers?fid=${fid}`;
   const res = await fetch(path);
   const j = await res.json();
-  return j.transfers
+  return j.transfers;
 }
-export async function checkFnameAvailable(fname: string): Promise<FnameTransfer[]>{
-  const path = `https://fnames.farcaster.xyz/transfers?name=${fname}`
+export async function checkFnameAvailable(
+  fname: string,
+): Promise<FnameTransfer[]> {
+  const path = `https://fnames.farcaster.xyz/transfers?name=${fname}`;
   const res = await fetch(path);
   const j = await res.json();
-  return j.transfers
+  return j.transfers;
 }
-export async function registerFname(json: any): Promise<FnameTransfer>{
-  const path = `https://fnames.farcaster.xyz/transfers`
+export async function registerFname(json: any): Promise<FnameTransfer> {
+  const path = `https://fnames.farcaster.xyz/transfers`;
   const body = JSON.stringify(json);
-  const headers = {"Content-type": "application/json"};
-  const opts = {method: "POST", body, headers};
+  const headers = { "Content-type": "application/json" };
+  const opts = { method: "POST", body, headers };
   const res = await fetch(path, opts);
   const j = await res.json();
-  return j.transfer
+  return j.transfer;
 }
 // channels
 export async function getChannels() {
