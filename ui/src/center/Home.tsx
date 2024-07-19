@@ -3,7 +3,8 @@ import useGlobalState from "../logic/state/state";
 
 export default function () {
   const { prof } = useGlobalState();
-  return <Feed fid={prof!.fid} />;
+  // return <Feed fid={prof!.fid} />;
+  return <Feed fid={302} />;
   // return <Feed fid={14537} />;
   // return <Feed fid={576} />;
   // return <Feed fid={5650} />;

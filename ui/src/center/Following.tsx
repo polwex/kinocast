@@ -5,23 +5,23 @@ import {
 } from "@tanstack/react-query";
 import spinner from "../assets/icons/roundspin.svg";
 import left from "../assets/icons/left.svg";
-import {
-  FollowRes,
-  FollowsRes,
-  userFollows,
-  userLinks,
-} from "../logic/fetch/kinohub";
 import { useState } from "react";
 import { Fid, UserProfile } from "../logic/types/farcaster";
 import useGlobalState, { useHistory } from "../logic/state/state";
-import { sendFollow, sendUnfollow } from "../logic/fetch/kinode";
+import {
+  FollowRes,
+  LinksRes,
+  fetchUserLinks,
+  sendFollow,
+  sendUnfollow,
+} from "../logic/fetch/kinode";
 
 export type LinkType = "in" | "out";
 function Follows({ fid, type }: { fid: number; type: LinkType }) {
   const [linkType, setl] = useState<LinkType>(type);
 
   async function init() {
-    const res = await userLinks(fid, Date.now());
+    const res = await fetchUserLinks(fid);
     return res;
   }
   const { isLoading, isError, data, refetch } = useQuery({
@@ -60,70 +60,6 @@ function Follows({ fid, type }: { fid: number; type: LinkType }) {
 }
 export default Follows;
 
-function Followers({ fid, res }: { res: FollowRes; fid: number }) {
-  async function init({ pageParam }: { pageParam: any }) {
-    const res = userFollows(fid, pageParam, 0);
-    return await res;
-  }
-  const {
-    isLoading,
-    isFetching,
-    isFetchingNextPage,
-    isError,
-    data,
-    refetch,
-    hasNextPage,
-    fetchNextPage,
-    status,
-  } = useInfiniteQuery({
-    queryKey: ["followers", fid],
-    queryFn: init,
-    initialPageParam: Date.now(),
-    getNextPageParam: (lastPage, _pages) => lastPage.cursor,
-  });
-  if (isLoading) return <ProfileList cursor={res.cursor} map={res.map} />;
-  else
-    return (
-      <>
-        {data!.pages.map((pag) => (
-          <ProfileList key={pag.cursor} {...pag} />
-        ))}
-      </>
-    );
-}
-function Following({ fid, res }: { res: FollowRes; fid: number }) {
-  async function init({ pageParam }: { pageParam: any }) {
-    const res = userFollows(fid, pageParam, 1);
-    return await res;
-  }
-  const {
-    isLoading,
-    isFetching,
-    isFetchingNextPage,
-    isError,
-    data,
-    refetch,
-    hasNextPage,
-    fetchNextPage,
-    status,
-  } = useInfiniteQuery({
-    queryKey: ["following", fid],
-    queryFn: init,
-    initialPageParam: Date.now(),
-    getNextPageParam: (lastPage, _pages) => lastPage.cursor,
-  });
-
-  if (isLoading) return <ProfileList cursor={res.cursor} map={res.map} />;
-  else
-    return (
-      <>
-        {data!.pages.map((pag) => (
-          <ProfileList key={pag.cursor} {...pag} />
-        ))}
-      </>
-    );
-}
-
 function Inner({
   fid,
   data,
@@ -131,7 +67,7 @@ function Inner({
   refetch,
 }: {
   fid: Fid;
-  data: FollowsRes;
+  data: LinksRes;
   refetch: Function;
   ltype: LinkType;
 }) {
@@ -139,9 +75,9 @@ function Inner({
     <div>
       <div id="users">
         {ltype === "in" ? (
-          <Followers fid={fid} res={data.followers} />
+          <ProfileList fid={fid} map={data.followers} />
         ) : (
-          <Following fid={fid} res={data.follows} />
+          <ProfileList fid={fid} map={data.following} />
         )}
       </div>
     </div>
@@ -149,10 +85,10 @@ function Inner({
 }
 
 function ProfileList({
-  cursor,
+  fid,
   map,
 }: {
-  cursor: number;
+  fid: Fid;
   map: Record<number, UserProfile>;
 }) {
   return (

@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use ed25519_dalek::{SecretKey, Signer, SigningKey};
+use hex::ToHex;
 use kinode_process_lib::{get_typed_state, println, set_state};
 use rand::rngs::OsRng;
 use serde::{Deserialize, Serialize};
@@ -24,16 +25,18 @@ fn dev_keys() -> SigningKey {
 pub struct State {
   pub active_fid: Option<u64>,
   key: [u8; 32],
+  keystring: String,
 }
 
 impl State {
   pub fn new() -> Self {
     let key = gen_keys();
     let key_bytes = key.to_bytes();
-    Self {
-      key: key_bytes,
-      active_fid: None,
-    }
+    let vf = key.verifying_key();
+    let keystring = hex::encode(vf.to_bytes());
+    Self { key: key_bytes,
+           keystring,
+           active_fid: None }
   }
 
   pub fn reset(&mut self) {
@@ -46,14 +49,27 @@ impl State {
   pub fn get_key(&self) -> SigningKey {
     SigningKey::from_bytes(&self.key)
   }
+  // pub fn get_keystring(&self) -> String {
+  //   let pk = SigningKey::from_bytes(&self.key);
+  //   let bytes = pk.verifying_key().to_bytes();
+  //   hex::encode(bytes)
+  // }
   pub fn print_state(&self) {
     println!("state {:?}", self);
   }
 
   pub fn save(&self) -> Result<()> {
-    let bytes = bincode::serialize(self)?;
-    set_state(&bytes);
-    Ok(())
+    let bytes = bincode::serialize(self);
+    match bytes {
+      Err(e) => {
+        println!("error serializing state!!! \n{:?}", e);
+        Err(anyhow!("fucked up"))
+      }
+      Ok(b) => {
+        set_state(&b);
+        Ok(())
+      }
+    }
   }
   pub fn change_key(&self) -> Result<()> {
     let n = State::new();
@@ -62,7 +78,7 @@ impl State {
 }
 pub fn load_state() -> State {
   let s = get_typed_state(|bytes| Ok(bincode::deserialize::<State>(bytes)?));
-  match s {
+  let ns = match s {
     Some(st) => {
       println!("state present");
       st
@@ -71,5 +87,7 @@ pub fn load_state() -> State {
       println!("state absent");
       State::new()
     }
-  }
+  };
+  let _ = ns.save();
+  ns
 }

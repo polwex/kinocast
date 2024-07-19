@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use anyhow::{anyhow, Result};
 use hex::ToHex;
 use kinode_process_lib::{
@@ -77,37 +79,45 @@ pub fn fetch_user_fid(username: &str) -> Result<u64> {
 // build
 
 pub fn build_timeline(our: &Address, state: &mut sur::State) -> Result<()> {
-  println!("building timeline  {:?}", state);
   match state.active_fid {
     None => Err(anyhow::anyhow!("no active fid")),
     Some(fid) => {
       let post_count = db::get_cast_count(our, fid)?;
+      let hashes = db::get_all_hashes(our)?;
       println!("post count {:?}", post_count);
       if post_count == 0 {
-        let _own_casts = save_all_casts(our, fid)?;
+        let _own_casts = save_all_casts(our, fid, &hashes)?;
         let links = save_links(our, fid)?;
         for (_, _, follow_fid, _, _) in links {
-          let _saved = save_all_casts(our, follow_fid)?;
+          let _saved = save_all_casts(our, follow_fid, &hashes)?;
         }
       } else {
-        let _own_casts = save_casts(our, fid)?;
+        let _own_casts = save_casts(our, fid, &hashes)?;
         let links = save_links(our, fid)?;
         for (_, _, follow_fid, _, _) in links {
-          let _saved = save_casts(our, follow_fid)?;
+          let _saved = save_casts(our, follow_fid, &hashes)?;
         }
       }
       Ok(())
     }
   }
 }
-fn save_casts(our: &Address, fid: u64) -> Result<()> {
+// fetch and save
+fn save_casts(our: &Address, fid: u64, hs: &HashSet<String>) -> Result<()> {
   let fids = fid.to_string();
   // println!("fetching and saving casts from {}", fids);
   let mut msgs: Vec<Message> = vec![];
+  let mut fmsgs: Vec<Message> = vec![];
   let casts = fetch_casts(&fids, None)?;
   let hres = serde_json::from_slice::<HubResponse>(&casts)?;
   msgs.extend(hres.messages);
-  write_casts(our, msgs)
+  for msg in msgs {
+    let has = hs.contains(&msg.hash);
+    if !has {
+      fmsgs.push(msg);
+    };
+  }
+  write_casts(our, fmsgs)
   // save the msgs to db
 }
 fn write_casts(our: &Address, msgs: Vec<Message>) -> Result<()> {
@@ -131,10 +141,11 @@ fn write_casts(our: &Address, msgs: Vec<Message>) -> Result<()> {
   let _casts_ok = db::write_casts(our, casts)?;
   Ok(())
 }
-fn save_all_casts(our: &Address, fid: u64) -> Result<()> {
+fn save_all_casts(our: &Address, fid: u64, hs: &HashSet<String>) -> Result<()> {
   let fids = fid.to_string();
   println!("fetching and saving casts from {}", fids);
   let mut msgs: Vec<Message> = vec![];
+  let mut fmsgs: Vec<Message> = vec![];
   let mut cursor: Option<String> = None;
   // TODO we might as well just ignore the cursor tho at least for the timeline
   loop {
@@ -148,7 +159,13 @@ fn save_all_casts(our: &Address, fid: u64) -> Result<()> {
       cursor = Some(hres.next_page_token);
     }
   }
-  write_casts(our, msgs)
+  for msg in msgs {
+    let has = hs.contains(&msg.hash);
+    if !has {
+      fmsgs.push(msg);
+    };
+  }
+  write_casts(our, fmsgs)
 }
 
 fn save_links(our: &Address, fid: u64) -> Result<Vec<(String, u64, u64, String, u32)>> {
@@ -166,7 +183,7 @@ fn save_links(our: &Address, fid: u64) -> Result<Vec<(String, u64, u64, String, 
         None => (),
         Some(b) => match b {
           MessageBodyJson::LinkBody(lb) => {
-            println!("link type {:?}", lb.r#type);
+            // println!("link type {:?}", lb.r#type);
             let tuple = (msg.hash, d.fid, lb.target_fid, lb.r#type, d.timestamp);
             links.push(tuple);
           }
@@ -282,7 +299,7 @@ pub fn to_farcaster_time(time_ms: u64) -> Result<u64> {
 pub fn from_farcaster_time(time: u64) -> u64 {
   let to_human = time * 1000 + FARCASTER_EPOCH;
   let date = chrono::NaiveDateTime::from_timestamp_millis(to_human as i64);
-  println!("date {:?}", date);
+  // println!("date {:?}", date);
   to_human
 }
 

@@ -1,6 +1,7 @@
 // standard Hubble API requests
 
 import { PG_URL, HUB_URL, RetardedTime } from "../constants";
+import { parseProf } from "../helpers";
 import {
   Fid,
   FidsRes,
@@ -24,7 +25,10 @@ export async function castById(fid: Fid, hash: string) {
   const path = `v1/castById?fid=${fid}&hash=${hash}`;
   return goFetch(path);
 }
-export async function castsByFid(fid: Fid, cursor: string) {
+export async function castsByFid(
+  fid: Fid,
+  cursor: string,
+): Promise<HubResponse<"MESSAGE_TYPE_CAST_ADD">> {
   const path = cursor
     ? `v1/castsByFid?reverse=1&fid=${fid}&pageToken=${cursor}`
     : `v1/castsByFid?reverse=1&fid=${fid}`;
@@ -129,7 +133,10 @@ export async function userData(
 ) {
   const type = requestType ? `&user_data_type=${requestType}` : "";
   const path = `v1/userDataByFid?fid=${fid}${type}`;
-  return goFetch(path);
+  const res: HubResponse<"MESSAGE_TYPE_USER_DATA_ADD"> = await goFetch(path);
+  console.log(res, "hub res");
+  const prof = parseProf(res.messages, fid);
+  return prof;
 }
 export async function fids(): Promise<FidsRes> {
   const path = `v1/fids`;

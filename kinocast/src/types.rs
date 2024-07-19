@@ -4,8 +4,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
-use crate::hub::from_farcaster_time;
-
 #[derive(Debug)]
 pub enum Errors {
   Bad,
@@ -71,8 +69,15 @@ pub enum UIResInner {
     reactions: Vec<ReactionRes>,
     cursor: u64,
   },
+  Links {
+    fid: u64,
+    following: ProfileMap,
+    followers: ProfileMap,
+  },
   Profile(Profile),
   Proxy(HubResponse),
+  PubKey(String),
+  Ack,
 }
 #[derive(Debug, Serialize, Deserialize)]
 pub enum UIPostRequest {
@@ -96,14 +101,16 @@ pub enum UIGetResponse {
   Profile(Profile),
   Casts(Casts),
 }
+pub type ProfileMap = HashMap<u64, Profile>;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Profile {
-  fid: u64,
-  displayname: String,
-  username: String,
-  bio: String,
-  pfp: String,
-  url: String,
+  pub fid: u64,
+  pub displayname: String,
+  pub username: String,
+  pub bio: String,
+  pub pfp: String,
+  pub url: String,
 }
 impl Profile {
   pub fn new(fid: u64,
@@ -403,10 +410,10 @@ pub struct CastT {
 impl CastT {
   pub fn from_sqlite(map: &HashMap<String, Value>) -> Result<Self> {
     // println!("cast db res {:?}", map);
-    let fts = map.get("created")
-                 .and_then(|v| v.as_u64())
-                 .ok_or_else(|| anyhow!("Missing or invalid 'cast author'"))? as u64;
-    let timestamp = from_farcaster_time(fts);
+    let timestamp = map.get("created")
+                       .and_then(|v| v.as_u64())
+                       .ok_or_else(|| anyhow!("Missing or invalid 'cast author'"))?
+                    as u64;
     let fid = map.get("author")
                  .and_then(|v| v.as_u64())
                  .ok_or_else(|| anyhow!("Missing or invalid 'cast author'"))? as u64;

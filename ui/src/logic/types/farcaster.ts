@@ -33,7 +33,8 @@ export type PID = {
 export type CastAddBody = {
   embedsDeprecated: [];
   mentions: Fid[];
-  parentCastId: PID;
+  parentCastId?: PID;
+  parentCastUrl?: string;
   text: string;
   mentionsPositions: number[];
   embeds: any[];
@@ -47,6 +48,10 @@ export type LinkBody = {
   origin: Fid;
   target: Fid;
 };
+export type UserDataBody = {
+  type: string;
+  value: string;
+};
 export type MessageBodyType<T extends MessageType> =
   T extends "MESSAGE_TYPE_CAST_ADD"
     ? { castAddBody: CastAddBody }
@@ -54,7 +59,9 @@ export type MessageBodyType<T extends MessageType> =
       ? { reactionBody: ReactionBody }
       : T extends "MESSAGE_TYPE_LINK_ADD"
         ? { linkBody: LinkBody }
-        : never;
+        : T extends "MESSAGE_TYPE_USER_DATA_ADD"
+          ? { userDataBody: UserDataBody }
+          : never;
 export interface MessageData<T extends MessageType> {
   data: {
     type: T;

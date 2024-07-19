@@ -1,18 +1,4 @@
 import {
-  ok,
-  Ok,
-  err,
-  Err,
-  Result,
-  okAsync,
-  errAsync,
-  ResultAsync,
-  fromThrowable,
-  fromPromise,
-  fromSafePromise,
-  safeTry,
-} from "neverthrow";
-import {
   Fid,
   FrameActionJson,
   HexString,
@@ -20,10 +6,9 @@ import {
   UserProfile,
 } from "../types/farcaster";
 import { AResult } from "../types/sortug";
-import { CastAddBody } from "@farcaster/hub-web";
-import { castsByFid, likesByFid } from "./hub";
-import { userChannels } from "./kinohub";
-import { ChannelRes } from "./warpcast";
+import { castsByFid, likesByFid, userData } from "./hub";
+import { ChannelRes, getUserChannels } from "./warpcast";
+import { parseCastAdd } from "../helpers";
 
 // export const URL = import.meta.env.PROD ? "" : "http://localhost:8095";
 
@@ -56,6 +41,16 @@ const PROXY_TARGET = `${import.meta.env.VITE_NODE_URL || "http://localhost:8090"
 // return api
 // }
 // Kinohub
+export const profileBunt: UserProfile = {
+  pfp: "",
+  displayname: "",
+  username: "",
+  bio: "",
+  fid: 0,
+  url: "",
+  follows: 0,
+  followers: 0,
+};
 export type NodeRes =
   | { timeline: TimelineRes }
   | { profile: UserProfile }
@@ -76,6 +71,12 @@ export type LikesRes = {
   likes: PID[];
   cursor: number;
 };
+export type ProfileMap = Record<Fid, UserProfile>;
+export type LinksRes = {
+  fid: Fid;
+  following: ProfileMap;
+  followers: ProfileMap;
+};
 export type ChannelsRes = {
   chans: ChannelRes[];
   cursor: number;
@@ -87,12 +88,20 @@ export type ThreadRes = {
   rts: ReactionRes[];
   replies: FullCastRes[];
 };
+export type FullThreadRes = {
+  author: UserProfile;
+  cast: CastRes;
+  likes: ReactionRes[];
+  rts: ReactionRes[];
+  replies: FullCastRes[];
+  reply_count: number;
+};
 export type FullCastRes = {
   author: UserProfile;
   cast: CastRes;
   likes: ReactionRes[];
   rts: ReactionRes[];
-  // replies: CastRes[];
+  replies: CastRes[];
   reply_count: number;
 };
 export type ReactionRes = {};
@@ -120,14 +129,14 @@ export type CastRes = {
   root_parent_url: string | null;
 };
 export type CastID = { fid: number; hash: number[] };
-export type Embed = { Url: string } | { CastId: CastID };
+export type Embed = { url: string } | { castId: CastID };
 type Timestamp = number;
 
 export async function fetchTimeline(
   fid: Fid,
   cursor: Timestamp,
 ): Promise<TimelineRes> {
-  const res = await gofetch(`/timeline?cursor=${cursor}}`);
+  const res = await gofetch(`/timeline?cursor=${cursor}`);
   if ("ok" in res) {
     return res.ok.timeline;
   } else
@@ -146,21 +155,41 @@ export async function fetchUserFeed(
     ? `/userfeed?fid=${fid}&cursor=${cursor}&replies=1`
     : `/userfeed?fid=${fid}&cursor=${cursor}`;
   const res = await gofetch(path);
-  if ("ok" in res) {
+  if ("ok" in res && res.ok.feed.casts.length > 0) {
     return res.ok;
   } else {
     const res2 = await castsByFid(fid, cursor.toString());
-    console.log(res2, "casts from hub");
-    return res2;
+    const ccasts = res2.messages.reduce((acc: FullCastRes[], r, i) => {
+      const t = r.data.type;
+      if (t !== "MESSAGE_TYPE_CAST_ADD") return acc;
+      const rr = parseCastAdd(r);
+      return [...acc, rr];
+    }, []);
+    const profile = await userData(fid);
+    const casts = ccasts.map((c) => ({ ...c, author: profile }));
+    return { feed: { fid, casts, cursor, profile } };
   }
 }
 export async function fetchUserReactions(
   fid: Fid,
   cursor: Timestamp,
 ): Promise<LikesRes> {
-  const res = await gofetch(`/userreactions?fid=${fid}&cursor=${cursor}}`);
+  const res = await gofetch(`/userreactions?fid=${fid}&cursor=${cursor}`);
   if ("ok" in res) {
-    return res;
+    return res.ok;
+  } else {
+    const res2 = await likesByFid(fid);
+    console.log(res2, "likesfrom hub");
+    return res2;
+  }
+}
+export async function fetchUserLinks(
+  fid: Fid,
+  // cursor: Timestamp,
+): Promise<LinksRes> {
+  const res = await gofetch(`/userlinks?fid=${fid}`);
+  if ("ok" in res) {
+    return res.ok;
   } else {
     const res2 = await likesByFid(fid);
     console.log(res2, "likesfrom hub");
@@ -171,18 +200,20 @@ export async function fetchUserChannels(
   fid: Fid,
   cursor: Timestamp,
 ): Promise<ChannelsRes> {
-  const res = await gofetch(`/userchans?fid=${fid}&cursor=${cursor}}`);
+  const res = await gofetch(`/userchans?fid=${fid}&cursor=${cursor}`);
   if ("ok" in res) {
-    return res;
+    return res.ok;
   } else {
-    const res2 = await userChannels(fid, cursor.toString());
+    const res2 = await getUserChannels(fid, cursor.toString());
     console.log(res2, "chans from hub");
     return { chans: res2.result.channels, cursor };
   }
 }
 
 export async function fetchFullThread(hash: string): Promise<ThreadRes> {
-  return await gofetch(`/fullthread?hash=${hash}`);
+  const res = await gofetch(`/fullthread?hash=${hash}`);
+  if ("ok" in res) return res.ok;
+  else return null as any;
 }
 export async function fetchEngagement(fid: Fid, hash: string): Promise<any> {
   const res = await gofetch(`/engagement?fid=${fid}&hash=${hash}`);
@@ -191,16 +222,9 @@ export async function fetchEngagement(fid: Fid, hash: string): Promise<any> {
     return {};
   } else return {};
 }
-export async function fetchPubkey(): AResult<HexString> {
+export async function fetchPubkey(): AResult<{ pubKey: string }> {
   // const res1 = await gofetch("/change-key");
   const res = await gofetch("/pubkey");
-  console.log(res, "wtf");
-  if (!res) return { error: "Something went wrong" };
-  // else return { ok: res };
-  else return { ok: `0x${res}` };
-}
-export async function checkNew(): Promise<number> {
-  const res = await gofetch("/logged");
   return res;
 }
 export async function readProfile(): AResult<{ profile: UserProfile }> {
@@ -214,39 +238,43 @@ export async function id_login(id: string): Promise<UserProfile> {
 }
 export async function logout(): Promise<boolean> {
   const res = await gofetch("/logout");
-  return res;
+  if ("ok" in res) return res.ok;
+  else return false;
 }
 export async function setupDB() {
-  const res: boolean = await gofetch("/setup");
-  return res;
+  const res = await gofetch("/setup");
+  if ("ok" in res) return res.ok;
 }
 export async function checkID() {}
 export async function fetchProfile(fid: number) {
-  const res: boolean = await gofetch(`/profile?fid=${fid}`);
-  return res;
+  const res = await gofetch(`/profile?fid=${fid}`);
+  if ("ok" in res) return res.ok;
+  else return 0;
 }
 export async function fetchCasts(fid: number) {
-  const res: boolean = await gofetch(`/casts?fid=${fid}`);
-  return res;
+  const res = await gofetch(`/casts?fid=${fid}`);
+  if ("ok" in res) return res.ok;
+  else return 0;
 }
 
 export async function setOnBackend(fid: number) {
-  const res: boolean = await gofetch(`/save-account?fid=${fid}`);
-  return res;
+  const res = await gofetch(`/save-account?fid=${fid}`);
+  if ("ok" in res) return res.ok;
 }
 
 export async function gofetch(
   path: string,
   opts: RequestInit = {},
-): Promise<any> {
+): AResult<any> {
   const url = `${BASE_URL}/api${path}`;
   console.log(url, "fetching");
   // TODO use neverthrow or whatever
   try {
     const res = await fetch(url, opts);
-    return await res.json();
+    const j = await res.json();
+    return j;
   } catch {
-    return null;
+    return { error: "request to node failed" };
   }
 }
 

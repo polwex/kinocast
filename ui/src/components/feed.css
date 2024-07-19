@@ -174,8 +174,11 @@
 
   & .opengraph {
     & .enclosure {
+      padding: 0.5rem;
       border: 2px ridge var(--fg);
-
+      & a{
+        text-decoration: none;
+      }
       & img {
         width: 100%;
         max-width: 100%;

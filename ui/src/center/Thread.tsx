@@ -5,10 +5,14 @@ import { useEffect, useRef, useState } from "react";
 // import { LoadFailed } from "@/loaders/Failed";
 import left from "../assets/icons/left.svg";
 import { useQuery } from "@tanstack/react-query";
-import { FullCastRes, ThreadRes, fullThread } from "../logic/fetch/kinohub";
-import { bytesToHash } from "../logic/helpers";
 import { checkFnameAvailable } from "../logic/fetch/warpcast";
 import { useHistory } from "../logic/state/state";
+import {
+  FullCastRes,
+  FullThreadRes,
+  ThreadRes,
+  fetchFullThread,
+} from "../logic/fetch/kinode";
 
 export function ThreadLoader({
   name,
@@ -57,7 +61,7 @@ function extractThread(t: ThreadRes) {
 
 function Thread({ fid, hash }: { fid: number; hash: string }) {
   async function fetchCast() {
-    const res = await fullThread(hash);
+    const res = await fetchFullThread(hash);
     return res;
   }
   const { isLoading, isError, data, refetch } = useQuery({
@@ -72,7 +76,9 @@ export default Thread;
 
 function Inner({ data, refetch }: { data: ThreadRes; refetch: Function }) {
   const { history, navigate } = useHistory();
-  const postData: FullCastRes = { ...data, reply_count: data.replies.length };
+  const postData: FullThreadRes = { ...data, reply_count: data.replies.length };
+  // TODO
+  const flatPost: FullCastRes = { ...postData, replies: [] };
 
   function goback() {
     const [now, before, ..._] = history;
@@ -91,7 +97,7 @@ function Inner({ data, refetch }: { data: ThreadRes; refetch: Function }) {
       </div>
       <div id="trill-thread">
         <div id="head">
-          <Post post={postData} />
+          <Post post={flatPost} />
         </div>
         <Tail data={data} refetch={refetch} />
       </div>

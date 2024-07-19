@@ -1,22 +1,23 @@
 use crate::hub;
+use crate::hub::from_farcaster_time;
 use crate::types::*;
 use anyhow::{anyhow, Error, Result};
-use hex::ToHex;
 use kinode_process_lib::kv::Kv;
 use kinode_process_lib::sqlite::Sqlite;
 use kinode_process_lib::{kv, println, sqlite, Address};
 use serde_json::Value;
 use serde_json::Value::Null;
 use std::collections::HashMap;
-use std::ptr::NonNull;
+use std::collections::HashSet;
+use std::time::Instant;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 // rocks
 
-pub fn open_kv(our: &Address) -> Result<Kv<String, String>> {
-  let kv = kv::open(our.package_id(), "kinocast", Some(5000))?;
-  Ok(kv)
-}
+// pub fn open_kv(our: &Address) -> Result<Kv<String, String>> {
+//   let kv = kv::open(our.package_id(), "kinocast", Some(5000))?;
+//   Ok(kv)
+// }
 
 //sqlite
 
@@ -27,13 +28,8 @@ pub fn open_db(our: &Address) -> Result<sqlite::Sqlite, Error> {
 }
 
 pub fn check_schema(our: &Address) -> anyhow::Result<()> {
-  let required = ["signing_keys", "user_data"];
-  let mut found = required.iter()
-                          .map(|&s| (s, false))
-                          .collect::<std::collections::HashMap<_, _>>();
-
   let db = open_db(our)?;
-  println!("fucking db");
+  let required = ["signing_keys", "user_data", "casts", "reactions", "links"];
   let statement = "SELECT name from sqlite_master WHERE type='table';".to_string();
   let data = db.read(statement, vec![])?;
   let values: Vec<Value> = data.iter()
@@ -42,14 +38,16 @@ pub fn check_schema(our: &Address) -> anyhow::Result<()> {
                                .collect();
 
   println!("sql tables:{:?}", values);
-  for val in values {
-    if let Value::String(s) = val {
-      if let Some(entry) = found.get_mut(s.as_str()) {
-        *entry = true;
-      }
-    }
-  }
-  let good = found.values().all(|&b| b);
+  let good = if values.is_empty() {
+    false
+  } else {
+    values.into_iter().all(|b| {
+                        let s = b.to_string();
+                        let ss = s.as_str();
+                        println!("ss {}", ss);
+                        required.contains(&ss)
+                      })
+  };
   if good {
     return Ok(());
   } else {
@@ -90,17 +88,9 @@ pub fn write_db_schema(our: &Address) -> anyhow::Result<()> {
       op_hash  TEXT
     );
     "#.to_string();
-  let s4 = r#"
-    CREATE TABLE bookmarks (
-      id INTEGER PRIMARY KEY, 
-      author_fid INTEGER NOT NULL, 
-      author_name TEXT NOT NULL, 
-      hash TEXT NOT NULL UNIQUE, 
-      text TEXT,
-      embeds JSONB,
-      created INTEGER NOT NULL
-      );
-    "#.to_string();
+  let ss3 = "CREATE INDEX IF NOT EXISTS idx_cast_hash ON casts(hash)".to_string();
+  let ss32 = "CREATE INDEX IF NOT EXISTS idx_cast_par ON casts(parent_hash)".to_string();
+  let ss33 = "CREATE INDEX IF NOT EXISTS idx_cast_paru ON casts(parent_url)".to_string();
   let s5 = r#"
     CREATE TABLE reactions (
       id INTEGER PRIMARY KEY, 
@@ -113,12 +103,28 @@ pub fn write_db_schema(our: &Address) -> anyhow::Result<()> {
       created INTEGER NOT NULL
       );
     "#.to_string();
+  let ss5 = "CREATE INDEX IF NOT EXISTS idx_reaction_hash ON reactions(target_hash)".to_string();
+  let s4 = r#"
+    CREATE TABLE bookmarks (
+      id INTEGER PRIMARY KEY, 
+      author_fid INTEGER NOT NULL, 
+      author_name TEXT NOT NULL, 
+      hash TEXT NOT NULL UNIQUE, 
+      text TEXT,
+      embeds JSONB,
+      created INTEGER NOT NULL
+      );
+    "#.to_string();
   db.write(s0, vec![], Some(tx_id))?;
   db.write(s1, vec![], Some(tx_id))?;
   db.write(s2, vec![], Some(tx_id))?;
   db.write(s3, vec![], Some(tx_id))?;
   db.write(s4, vec![], Some(tx_id))?;
   db.write(s5, vec![], Some(tx_id))?;
+  db.write(ss5, vec![], Some(tx_id))?;
+  db.write(ss3, vec![], Some(tx_id))?;
+  db.write(ss32, vec![], Some(tx_id))?;
+  db.write(ss33, vec![], Some(tx_id))?;
   return db.commit_tx(tx_id);
 }
 pub fn write_signing_key(our: &Address, fid: &u64, pubkey: String) -> Result<(), Error> {
@@ -225,50 +231,58 @@ pub fn write_casts(our: &Address,
   let tx_id = db.begin_tx()?;
   let s2 = r#"
         INSERT OR IGNORE INTO casts(
-        author, 
-        created,
-        hash, 
-        text,
-        embeds,
-        mentions,
-        mentions_positions 
+          author, 
+          created,
+          hash, 
+          text,
+          embeds,
+          mentions,
+          mentions_positions, 
+          parent_url,
+          parent_hash,
+          op_url,
+          op_hash
         ) 
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7);
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11);
         "#.to_string();
   // VALUES (?1, ?2, ?3, jsonb(?4), jsonb(?5), jsonb(?6), ?7);
-  // parent_url,
-  // parent_hash,
-  // op_url,
-  // op_hash
   for (hash, fid, ts, poast) in casts {
     // TODO add root parents
     // println!("par {:? }", poast.parent);
+    let timestamp = from_farcaster_time(ts as u64);
     let embeds = serde_json::to_string(&poast.embeds).unwrap();
     // let jembeds = serde_json::json!(&poast.embeds);
     // println!("embeds {:?} \n {} \n {}", poast.embeds, embeds, jembeds);
     let mentions = serde_json::to_string(&poast.mentions).unwrap();
     let mentions_p = serde_json::to_string(&poast.mentions_positions).unwrap();
-    // let (root_url, root_hash) = find_op(&db, fid, poast.clone());
-    // let (parent_url, parent_hash) = match poast.parent {
-    //   None => (Null, serde_json::Value::Null),
-    //   Some(p) => match p {
-    //     CastAddBodyParentJson::ParentCastId { fid, hash } => {
-    //       (serde_json::Value::Null, serde_json::Value::String(hash))
-    //     }
-    //     CastAddBodyParentJson::ParentUrl(url) => {
-    //       (serde_json::Value::String(url), serde_json::Value::Null)
-    //     }
-    //   },
-    // };
+    // let mut start = Instant::now();
+    let (root_url, root_hash) = find_op(&db, fid, poast.clone());
+    // println!("found op {:?}", start.elapsed());
+    let (parent_url, parent_hash) = match poast.parent {
+      None => (Null, serde_json::Value::Null),
+      Some(p) => match p {
+        CastAddBodyParentJson::ParentCastId { fid, hash } => {
+          (serde_json::Value::Null, serde_json::Value::String(hash))
+        }
+        CastAddBodyParentJson::ParentUrl(url) => {
+          (serde_json::Value::String(url), serde_json::Value::Null)
+        }
+      },
+    };
+    // println!("found parent {:?}", start.elapsed());
     // println!("parpar \n{:?} \n{:?} \n{:?} \n{:?}",
     //          root_url, root_hash, parent_url, parent_hash);
     let p1: Vec<Value> = vec![serde_json::Value::Number(fid.into()),
-                              serde_json::Value::Number(ts.into()),
+                              serde_json::Value::Number(timestamp.into()),
                               serde_json::Value::String(hash.clone()),
                               serde_json::Value::String(poast.text.clone()),
                               serde_json::Value::String(embeds),
                               serde_json::Value::String(mentions),
-                              serde_json::Value::String(mentions_p),];
+                              serde_json::Value::String(mentions_p),
+                              parent_url,
+                              parent_hash,
+                              root_url,
+                              root_hash];
     db.write(s2.clone(), p1, Some(tx_id))?;
   }
   db.commit_tx(tx_id)
@@ -365,11 +379,12 @@ pub fn write_links(our: &Address,
         "#.to_string();
   let tx_id = db.begin_tx()?;
   for (hash, origin, target, taip, ts) in links {
+    let timestamp = from_farcaster_time(ts as u64);
     let p1 = vec![serde_json::Value::String(hash.clone()),
                   serde_json::Value::Number(origin.into()),
                   serde_json::Value::Number(target.into()),
                   serde_json::Value::String(taip),
-                  serde_json::Value::Number(ts.into()),];
+                  serde_json::Value::Number(timestamp.into()),];
     db.write(s1.clone(), p1, Some(tx_id))?;
   }
   db.commit_tx(tx_id)
@@ -384,12 +399,13 @@ pub fn write_reactions(our: &Address,
         "#.to_string();
   let tx_id = db.begin_tx()?;
   for (hash, fid, tfid, thash, taip, ts) in reactions {
+    let timestamp = from_farcaster_time(ts as u64);
     let p1 = vec![serde_json::Value::String(hash.clone()),
                   serde_json::Value::Number(fid.into()),
                   serde_json::Value::Number(tfid.into()),
                   serde_json::Value::String(thash.into()),
                   serde_json::Value::Number(taip.into()),
-                  serde_json::Value::Number(ts.into()),];
+                  serde_json::Value::Number(timestamp.into()),];
     db.write(s1.clone(), p1, Some(tx_id))?;
   }
   db.commit_tx(tx_id)
@@ -465,7 +481,6 @@ pub fn get_cast_count(our: &Address, fid: u64) -> Result<u64> {
   let data = db.read(statement, vec![serde_json::Value::Number(fid.into())]);
   match data {
     Ok(v) => {
-      println!("db res {:?}", v);
       if let Some(item) = v.get(0) {
         let value = item.get("COUNT(*)");
         match value {
@@ -482,50 +497,97 @@ pub fn get_cast_count(our: &Address, fid: u64) -> Result<u64> {
     Err(_) => Ok(0),
   }
 }
-pub fn get_casts(our: &Address, fid: u64) -> Result<Vec<CastRes>> {
+pub fn get_casts(our: &Address, fid: u64, cursor: u64, replies: bool) -> Result<Vec<CastRes>> {
   let db = open_db(our)?;
-  let statement = r#"
-    SELECT text,
-     hash,
-     author,
-     embeds,
-     mentions,
-     mentions_positions,
-     casts.created, 
-     fid,
-     username,
-     name,
-     bio,
-     pfp,
-     url
+  let mut statement = r#"
+    SELECT *
      FROM casts 
      LEFT JOIN user_data ON casts.author = user_data.fid
      WHERE author = ?
      "#.to_string();
-  let params = vec![fid.into()];
+  if replies {
+    statement.push_str("AND casts.parent_url IS NULL AND casts.parent_hash IS NULL\n");
+  };
+  let mut params = vec![fid.into()];
+  if cursor > 0 {
+    statement.push_str("AND casts.created < ?\n");
+    params.push(cursor.into());
+  };
   let data = db.read(statement, params);
-  println!("reading casts {:?} {:?}", fid, data);
   let data = data.unwrap();
-  let res = process_casts(our, data)?;
+  let mut pm = HashMap::new();
+  let pprof = get_profile(our, fid);
+  if let Some(profile) = pprof {
+    pm.insert(fid, profile);
+  };
+  let res = process_casts(our, data, pm)?;
   Ok(res)
 }
-pub fn process_casts(our: &Address, data: Vec<HashMap<String, Value>>) -> Result<Vec<CastRes>> {
+pub fn get_casts_inner(our: &Address, fid: Value, pm: ProfileMap) -> Result<Vec<CastRes>> {
+  let db = open_db(our)?;
+  let statement = r#"
+    SELECT *
+     FROM casts 
+     WHERE author = ?
+     ORDER BY casts.created DESC
+     LIMIT 50
+     "#.to_string();
+  let params = vec![fid];
+  let data = db.read(statement, params);
+  let data = data.unwrap();
+  let res = process_casts(our, data, pm)?;
+  Ok(res)
+}
+pub fn get_casts_latest(our: &Address, fid: &u64, cursor: u64) -> Result<Vec<CastRes>> {
+  let db = open_db(our)?;
+  let statement = if cursor > 0 {
+    r#"
+    SELECT *
+     FROM casts 
+     WHERE author IS NOT ?1
+     AND created < ?2
+     ORDER BY created DESC
+     LIMIT 100
+     "#.to_string()
+  } else {
+    r#"
+    SELECT *
+     FROM casts 
+     WHERE author IS NOT ?
+     ORDER BY created DESC
+     LIMIT 100
+     "#.to_string()
+  };
+  let f = fid.to_owned();
+  let mut params = vec![f.into()];
+  if cursor > 0 {
+    params.push(cursor.into());
+  };
+  let data = db.read(statement, params);
+  let data = data.unwrap();
+  let pm = HashMap::new();
+  let res = process_casts(our, data, pm)?;
+  Ok(res)
+}
+pub fn process_casts(our: &Address,
+                     data: Vec<HashMap<String, Value>>,
+                     pm: ProfileMap)
+                     -> Result<Vec<CastRes>> {
   let mut res = vec![];
   for dbres in data {
     let cast = CastT::from_sqlite(&dbres);
-    println!("cast {:?}", cast);
     if let Err(_) = cast {
       continue;
     }
-    let author = match Profile::from_sqlite(&dbres) {
-      Err(err) => {
-        println!("failed parsing profile {:?}", err);
-        None
-      }
-      Ok(p) => Some(p),
-    };
-    println!("parsed profile {:?}", author);
     let cast = cast.unwrap();
+    let author = match pm.get(&cast.fid) {
+      None => None,
+      Some(p) => Some(p.to_owned()),
+    };
+    // if let None = author {
+    //   let r = write_db_profile(our, &cast.fid);
+    //   println!("saved profile {:?}", r);
+    // }
     let (rts, likes, replies) = get_engagement(our, &cast, true);
     let reply_count = replies.len();
     let cr = CastRes { author,
@@ -552,6 +614,8 @@ pub fn get_timeline(our: &Address, fid: u64) -> Result<Vec<CastRes>> {
       fids.push(v.to_owned());
     }
   }
+  // let fids = &fids[0..3];
+  let profile_map = get_profile_bulk(our, &fids)?;
   let values = vec!["?"; fids.len()].join(",");
   // let values = fids.clone()
   //                  .into_iter()
@@ -568,7 +632,7 @@ pub fn get_timeline(our: &Address, fid: u64) -> Result<Vec<CastRes>> {
   let d2 = db.read(s2, fids)?;
   // let d2 = db.read(s2, vec![])?;
   println!("tl len {:?}", d2.len());
-  let res = process_casts(our, d2)?;
+  let res = process_casts(our, d2, profile_map)?;
   Ok(res)
 }
 pub fn get_timeline2(our: &Address, fid: u64) -> Result<Vec<CastRes>> {
@@ -581,17 +645,58 @@ pub fn get_timeline2(our: &Address, fid: u64) -> Result<Vec<CastRes>> {
     let f = link.get("target");
     if let Some(v) = f {
       let uv = v.as_u64().unwrap();
-      fids.push(uv);
-      // fids.push(v.to_owned());
+      fids.push(v.to_owned());
     }
   }
+  let profile_map = get_profile_bulk(our, &fids)?;
   let mut res = vec![];
-  // let fids = vec![346692, 378889];
   for ffid in fids {
-    let cs = get_casts(our, ffid).unwrap();
+    let cs = get_casts_inner(our, ffid, profile_map.clone()).unwrap();
     res.extend(cs);
   }
   Ok(res)
+}
+pub fn get_timeline3(our: &Address, fid: u64, cursor: u64) -> Result<Vec<CastRes>> {
+  let casts = get_casts_latest(our, &fid, cursor)?;
+  let mut hset: HashSet<u64> = HashSet::new();
+  for cast in casts.clone() {
+    hset.insert(cast.cast.fid);
+  }
+  let fids: Vec<Value> = hset.into_iter()
+                             .map(|f| serde_json::Value::Number(f.into()))
+                             .collect();
+  let pm = get_profile_bulk(our, &fids)?;
+  let mut missing: Vec<u64> = vec![];
+  let mut res = casts;
+  for c in &mut res {
+    match pm.get(&c.cast.fid) {
+      None => {
+        missing.push(c.cast.fid);
+        c.author = None;
+      }
+      Some(p) => {
+        c.author = Some(p.to_owned());
+      }
+    }
+  }
+  for mfid in missing {
+    let r = write_db_profile(our, &mfid);
+  }
+  Ok(res)
+}
+pub fn get_profile_bulk(our: &Address, fids: &[Value]) -> Result<ProfileMap> {
+  let db = open_db(our)?;
+  let values = vec!["?"; fids.len()].join(",");
+  let statement = format!("SELECT * FROM user_data WHERE fid IN ({})", values);
+  let data = db.read(statement, fids.to_vec())?;
+  let mut mp: HashMap<u64, Profile> = HashMap::new();
+  for dat in data {
+    let Ok(p) = Profile::from_sqlite(&dat) else {
+      continue;
+    };
+    mp.insert(p.fid, p);
+  }
+  Ok(mp)
 }
 pub fn get_profile(our: &Address, fid: u64) -> Option<Profile> {
   let Ok(db) = open_db(our) else {
@@ -599,7 +704,7 @@ pub fn get_profile(our: &Address, fid: u64) -> Option<Profile> {
   };
   let statement = "SELECT * FROM user_data WHERE fid = ? LIMIT 1".to_string();
   let data = db.read(statement, vec![fid.into()]);
-  println!("prof data {:?} {:?}", data, fid);
+  // println!("prof data {:?} {:?}", data, fid);
   match data {
     Ok(v) => {
       if let Some(item) = v.get(0) {
@@ -723,4 +828,67 @@ pub fn print_pubkey(our: &Address) -> Result<String> {
     }
     _ => Err(anyhow!("bad")),
   }
+}
+pub fn get_all_hashes(our: &Address) -> Result<HashSet<String>> {
+  let db = open_db(our)?;
+  let statement = r#"
+    SELECT hash
+     FROM casts 
+     "#.to_string();
+  let params = vec![];
+  let data = db.read(statement, params);
+  let data = data.unwrap();
+  let mut res = HashSet::new();
+  for dat in data {
+    let hv = dat.get("hash");
+    match hv {
+      None => {
+        continue;
+      }
+      Some(v) => {
+        let vs = v.as_str();
+        match vs {
+          None => {
+            continue;
+          }
+          Some(s) => {
+            res.insert(s.to_string());
+          }
+        }
+      }
+    }
+  }
+  Ok(res)
+}
+pub fn get_fid_links(our: &Address, fid: u64) -> Result<UIResInner> {
+  let db = open_db(our)?;
+  let statement = "SELECT target FROM links WHERE origin = ? AND type = 'follow'".to_string();
+  let s2 = "SELECT origin FROM links WHERE target = ? AND type = 'follow'".to_string();
+  let params = vec![fid.into()];
+  let mut ffollowers = vec![];
+  let mut ffollowing = vec![];
+  let data = db.read(statement, params.clone())?;
+  let data2 = db.read(s2, params.clone())?;
+  for follow in data {
+    let fidr = follow.get("target");
+    if let None = fidr {
+      continue;
+    };
+    let fid = fidr.unwrap();
+    ffollowing.push(fid.to_owned());
+  }
+  for follow in data2 {
+    let fidr = follow.get("target");
+    if let None = fidr {
+      continue;
+    };
+    let fido = fidr.unwrap();
+    ffollowers.push(fido.to_owned());
+  }
+  let followers = get_profile_bulk(our, &ffollowers)?;
+  let following = get_profile_bulk(our, &ffollowing)?;
+  let res = UIResInner::Links { fid,
+                                following,
+                                followers };
+  Ok(res)
 }

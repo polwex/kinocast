@@ -116,6 +116,14 @@ button:focus-visible {
   padding: 1rem;
   max-width: max-content;
 }
+.bcard{
+  padding: 1rem;
+  max-width: max-content;
+  min-width: 50%;
+  border: 1px solid var(--fg);
+  position: relative;
+  margin-top: 2rem;
+}
 
 .row {
   display: flex;
@@ -323,7 +331,9 @@ button:focus-visible {
 #timeline {
   width: 800px;
 }
-
+#loading-screen{
+  
+}
 #super-spinner {
   width: 50%;
 }

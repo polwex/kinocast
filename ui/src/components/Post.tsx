@@ -47,6 +47,7 @@ type PostType = FullCastRes;
 
 function Post(props: { post: PostType; quote?: boolean }) {
   const { post } = props;
+  if (post.cast.embeds.length === 0) return null;
   const { navigate, history } = useHistory();
   function openThread(e: React.MouseEvent) {
     e.stopPropagation();
@@ -76,6 +77,7 @@ function Post(props: { post: PostType; quote?: boolean }) {
 export default Post;
 
 export function Header({ post }: { post: PostType }) {
+  // console.log(post.cast.timestamp, "post time");
   const postTime = new Date(post.cast.timestamp);
 
   const { history, navigate } = useHistory();
@@ -114,14 +116,19 @@ export function Body({ post, quote }: { post: PostType; quote?: boolean }) {
     (acc: Acc, item: string, i) => {
       const sp = acc.text.split(item);
       // const key = `${item}${i}`;
-      let textNode = <span>{sp[0]}</span>;
-      let urlNode = <a href={item}>{abbreviate(item, 40)}</a>;
+      let textNode = <span key={sp[0] + i}>{sp[0]}</span>;
+      let urlNode = (
+        <a key={item + i} href={item}>
+          {abbreviate(item, 40)}
+        </a>
+      );
       const nodes = [...acc.nodes, textNode, urlNode];
       const text = sp.slice(1).join("");
       return { nodes, text };
     },
     { nodes: [], text: post.cast.text },
   );
+  // if (post.cast.embeds.length > 0) console.log(post.cast.embeds, "post embeds");
   return (
     <div className="trill-post-body body">
       <div className="body-text">
@@ -131,15 +138,15 @@ export function Body({ post, quote }: { post: PostType; quote?: boolean }) {
       {!quote && (
         <div className="body-embeds">
           {post.cast.embeds.map((e, i): any =>
-            "Url" in e ? (
+            "url" in e ? (
               <URLEmbed
                 key={JSON.stringify(e) + i}
-                url={e.Url}
+                url={e.url}
                 fid={post.cast.fid}
                 hash={post.cast.hash}
               />
-            ) : "CastId" in e ? (
-              <QuoteLoader key={i} fid={e.CastId.fid} hash={e.CastId.hash} />
+            ) : "castId" in e ? (
+              <QuoteLoader key={i} fid={e.castId.fid} hash={e.castId.hash} />
             ) : null,
           )}
         </div>
@@ -175,13 +182,13 @@ function URLEmbed(props: { url: string; fid: number; hash: string }) {
   else if (og) return <Og og={og} {...props} />;
   else if (img)
     return (
-      <a href={img} target="_blank">
+      <a className="url embed" href={img} target="_blank">
         <img src={img} />
       </a>
     );
   else
     return (
-      <a className="url" href={props.url}>
+      <a className="url embed" href={props.url}>
         {props.url}
       </a>
     );
@@ -378,6 +385,7 @@ export function FooterInner({
   reactions: MessageData<"MESSAGE_TYPE_REACTION_ADD">[];
 }) {
   const { prof } = useGlobalState();
+  const [liked, setLiked] = useState(false);
   const engBunt: { likes: Fid[]; rts: Fid[] } = {
     likes: [],
     rts: [],
@@ -415,6 +423,7 @@ export function FooterInner({
   }
   async function doLike(e: React.MouseEvent) {
     e.stopPropagation();
+    setLiked(true);
     const postHash = post.cast.hash;
     const pid = { fid: post.author.fid, hash: postHash.slice(2) };
     const res = await sendLike(pid);
@@ -474,7 +483,7 @@ export function FooterInner({
         >
           {abbreviateNumber(eng.likes.length)}
         </span>
-        {eng.likes.includes(prof!.fid) ? (
+        {liked || eng.likes.includes(prof!.fid) ? (
           <img role="link" onMouseUp={doLike} src={redheart} alt="" />
         ) : (
           <img role="link" onMouseUp={doLike} src={like} alt="" />

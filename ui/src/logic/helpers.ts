@@ -1,5 +1,7 @@
+import { fromFarcasterTime } from "@farcaster/hub-web";
 import { RetardedTime } from "./constants";
-import { Post, UserProfile } from "./types/farcaster";
+import { CastRes, FullCastRes, ReactionRes, profileBunt } from "./fetch/kinode";
+import { MessageData, Post, UserProfile } from "./types/farcaster";
 
 export function date_diff(date: number | Date, type: "short" | "long") {
   const now = new Date().getTime();
@@ -53,10 +55,13 @@ export function displayCount(c: number): string {
 
 // parsing hub
 
-export function parseProf(p: any, fid: number): UserProfile {
+export function parseProf(
+  p: MessageData<"MESSAGE_TYPE_USER_DATA_ADD">[],
+  fid: number,
+): UserProfile {
   const [followers, follows] = [0, 0];
   let [username, displayname, bio, url, pfp] = ["", "", "", "", ""];
-  for (let m of p.messages) {
+  for (let m of p) {
     const d = m.data.userDataBody;
     if (d.type === "USER_DATA_TYPE_USERNAME") username = d.value;
     if (d.type === "USER_DATA_TYPE_PFP") pfp = d.value;
@@ -169,4 +174,52 @@ export function abbreviateNumber(n: number): string {
 export function abbreviate(s: string, len: number): string {
   if (s.length < len) return s;
   else return `${s.slice(0, len)}...`;
+}
+
+export function parseCastAdd(
+  r: MessageData<"MESSAGE_TYPE_CAST_ADD">,
+): FullCastRes {
+  const likes: ReactionRes[] = [];
+  const rts: ReactionRes[] = [];
+  const replies: CastRes[] = [];
+  const reply_count = replies.length;
+  const ccast = r.data.castAddBody;
+  const fid = r.data.fid;
+  const text = ccast.text;
+  let timestamp = r.data.timestamp;
+  const tsres = fromFarcasterTime(r.data.timestamp);
+  if (tsres.isOk()) {
+    timestamp = tsres.value;
+  }
+  const hash = r.hash;
+  const embeds = ccast.embeds;
+  const mentions = ccast.mentions;
+  const mentions_positions = ccast.mentionsPositions;
+  const parent_url = ccast.parentCastUrl ? ccast.parentCastUrl : null;
+  const parent_hash = ccast.parentCastId ? ccast.parentCastId.hash : null;
+  const parent_fid = ccast.parentCastId ? ccast.parentCastId.fid : null;
+  const root_parent_hash = null;
+  const root_parent_url = null;
+  const cast: CastRes = {
+    fid,
+    text,
+    timestamp,
+    hash,
+    mentions,
+    mentions_positions,
+    embeds,
+    parent_url,
+    parent_hash,
+    parent_fid,
+    root_parent_hash,
+    root_parent_url,
+  };
+  return {
+    author: profileBunt,
+    cast,
+    likes,
+    rts,
+    replies,
+    reply_count,
+  };
 }

@@ -67,3 +67,7 @@ export const farcastHub = {
 
 export const RetardedTime = 1609459200000;
 export const TIMEOUT = 10_000;
+
+//
+export const NEWMAN =
+  "https://s3.sortug.com/urbit/polwex/2024.7.18..20.22.10..8f9d.b22d.0e56.0418-image.png";

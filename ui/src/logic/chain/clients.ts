@@ -155,16 +155,20 @@ export function phraseWallet(phrase: string): Result<HDNodeWallet> {
 
 export async function checkSigners(fid: number): AResult<HexString> {
   const signers = await onChainSignersByFid(fid, null);
-  console.log(signers, "signers");
+  // console.log(signers, "signers");
+  const keys = signers.events.map((s: any) => s?.signerEventBody?.key);
+  console.log(keys, "signer keys");
   const pubkey = await fetchPubkey();
+  console.log(pubkey, "kinode pubkey");
   if ("error" in pubkey)
     return { error: "couldn't retrieve kinode networking key" };
+  const kinodeKey: HexString = `0x${pubkey.ok.pubKey}`;
   for (let s of signers.events) {
     // TODO check for event types
     const key = s.signerEventBody.key;
-    if (key === pubkey.ok) return { ok: pubkey.ok };
+    if (key === kinodeKey) return { ok: kinodeKey };
   }
-  return { error: "" };
+  return { error: "no matching signing key found" };
 }
 
 export function phraseClient(phrase: string): WalletClient {
@@ -286,14 +290,15 @@ export async function registerFlow(
   if ("error" in signature) return signature;
   const signingKey = await fetchPubkey();
   if ("error" in signingKey) return signingKey;
-  const metadata = await getAppMeta(signingKey.ok);
+  const pubKey: HexString = `0x${signingKey.ok.pubKey}`;
+  const metadata = await getAppMeta(`0x${signingKey.ok.pubKey}`);
   console.log(metadata, "md");
   if (!metadata.isOk()) return { error: "metadata error" };
   const signer = new ViemWalletEip712Signer(walletClient as any);
   const addSignature = await getUserSignature(
     publicClient,
     walletClient!.account!.address,
-    signingKey.ok,
+    pubKey,
     signer,
     metadata.value,
     deadline,
@@ -306,7 +311,7 @@ export async function registerFlow(
     deadline,
     signature.ok,
     addSignature.value,
-    signingKey.ok,
+    pubKey,
     metadata.value,
   );
   return { ok: "ok" };

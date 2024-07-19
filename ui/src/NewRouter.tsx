@@ -35,7 +35,7 @@ function Muh() {
   useEffect(() => {
     start();
   }, []);
-  if (loading) return <img id="super-spinner" className="gc" src={spinner} />;
+  if (loading) return <LoadingScreen />;
   if (!prof) return <Init />;
   // const rc: RouteChild = (params) => <Timeline />
   return (
@@ -68,6 +68,15 @@ function Muh() {
   );
 }
 
+function LoadingScreen() {
+  return (
+    <div id="loading-screen" className="bcard bc">
+      <h3 className="tc">Kinocast</h3>
+      <p className="tc">Setting things up in your node, please wait</p>
+      <img id="super-spinner" className="bc" src={spinner} />
+    </div>
+  );
+}
 export default Muh;
 
 // Define specific parameter types for each route

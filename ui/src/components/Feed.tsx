@@ -11,16 +11,9 @@ import Composer from "../modals/Composer";
 import "./feed.css";
 import spinner from "../assets/icons/ring-spin.svg";
 
-import { userCasts, userChannels, userLikes } from "../logic/fetch/kinohub";
 import useGlobalState, { useHistory } from "../logic/state/state";
 import { InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
-import {
-  ChannelRes,
-  UserChannelsRes,
-  checkFidFname,
-  checkFnameAvailable,
-} from "../logic/fetch/warpcast";
-import { castsByFid } from "../logic/fetch/hub";
+import { ChannelRes, checkFnameAvailable } from "../logic/fetch/warpcast";
 import {
   ChannelsRes,
   FullCastRes,
@@ -29,7 +22,9 @@ import {
   fetchUserChannels,
   fetchUserFeed,
   fetchUserReactions,
+  profileBunt,
 } from "../logic/fetch/kinode";
+import { NEWMAN } from "../logic/constants";
 
 export type FeedType = "casts" | "replies" | "likes" | "channels";
 
@@ -99,11 +94,11 @@ function Feed({ fid }: { fid: number }) {
     refetch();
   }, [feedType]);
 
-  if (isLoading) return <img className="agc big-spin" src={spinner} />;
+  if (!data) return <img className="agc big-spin" src={spinner} />;
   else
     return (
       <Inner
-        data={data!}
+        data={data}
         refetch={refetch}
         fetchNext={fetchNextPage}
         loading={isFetchingNextPage}
@@ -211,16 +206,6 @@ function Inner({
 //   //   <PostList posts={likes} />
 //   <ChannelList data={channels} />
 // )}
-const profileBunt: UserProfile = {
-  pfp: "",
-  displayname: "",
-  username: "",
-  bio: "",
-  fid: 0,
-  url: "",
-  follows: 0,
-  followers: 0,
-};
 export function PostList({ posts }: { posts: FullCastRes[] }) {
   posts.sort(
     (a, b) =>
@@ -252,6 +237,8 @@ function UserInfo({ data }: { data: UserProfile }) {
     data;
   // console.log(data, "data");
   const { prof, setModal, logout } = useGlobalState();
+  const prof_pic = pfp ? pfp : NEWMAN;
+  const uname = username ? username : fid;
   const our = prof!.fid;
   function goback() {
     const [now, before, ..._] = history;
@@ -283,12 +270,12 @@ function UserInfo({ data }: { data: UserProfile }) {
         <button onClick={openComposer}>Cast</button>
       </div>
       <div id="bio">
-        <img src={pfp} className="cp" onClick={enlargenProfile} />
+        <img src={prof_pic} className="cp" onClick={enlargenProfile} />
         <div id="bio-proper">
           <div className="row spread">
             <div id="names">
               <div className="bio-name">{displayname}</div>
-              <div className="bio-uname">@{username}</div>
+              <div className="bio-uname">@{uname}</div>
             </div>
             {fid == our ? (
               <button onClick={doLogout}>Logout</button>

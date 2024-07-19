@@ -336,7 +336,8 @@ function SetKeys({ fid, user }: { fid: number; user: UserProfile | null }) {
     const pubkey = await fetchPubkey();
     console.log(pubkey, "kinode signing key");
     if ("error" in pubkey) return setError(pubkey.error);
-    const tx = await setKeysFlow(pc, wc!, pubkey.ok);
+    const pk: HexString = `0x${pubkey.ok.pubKey}`;
+    const tx = await setKeysFlow(pc, wc!, pk);
     setLoading("");
     if ("error" in tx) {
       console.log("key transaction failed", tx.error);
@@ -633,11 +634,13 @@ function Final({ fname }: { fname: string }) {
   return (
     <div className="blocks">
       <h3 className="tc">Success!</h3>
-      <p>
+      <p className="tc">
         Your have successfully loaded your Farcaster account {fname} through
         Kinode.
       </p>
-      <p>You are fully logged in now. Click on the button to start casting.</p>
+      <p className="tc">
+        You are fully logged in now. Click on the button to start casting.
+      </p>
       <button className="bc" onClick={init}>
         Let's go
       </button>

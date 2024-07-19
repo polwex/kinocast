@@ -8,15 +8,16 @@ use kinode_process_lib::{
   },
   println, sqlite,
   timer::set_timer,
-  Address, Context, Message, Request,
+  Address, Message, Request,
 };
 
 // In main.rs or lib.rs
 mod keys;
 mod proxy;
 mod types;
-use keys::generate_keys;
 use types::*;
+
+use crate::db::check_schema;
 
 mod db;
 mod hub;
@@ -40,7 +41,7 @@ const ICON: &str = include_str!("icon");
 
 fn handle_ui(our: &Address,
              state: &mut sur::State,
-             source: &Address,
+             _source: &Address,
              body: &[u8])
              -> anyhow::Result<()> {
   let Ok(server_request) = serde_json::from_slice::<HttpServerRequest>(body) else {
@@ -49,14 +50,14 @@ fn handle_ui(our: &Address,
     return Ok(());
   };
   match server_request {
-    HttpServerRequest::WebSocketOpen { channel_id, .. } => {
-      // Set our channel_id to the newly opened channel
-      // Note: this code could be improved to support multiple channels
-      // *our_channel_id = channel_id;
-      Ok(())
-    }
-    HttpServerRequest::WebSocketPush { .. } => Ok(()),
-    HttpServerRequest::WebSocketClose(_channel_id) => Ok(()),
+    // HttpServerRequest::WebSocketOpen { channel_id, .. } => {
+    //   // Set our channel_id to the newly opened channel
+    //   // Note: this code could be improved to support multiple channels
+    //   // *our_channel_id = channel_id;
+    //   Ok(())
+    // }
+    // HttpServerRequest::WebSocketPush { .. } => Ok(()),
+    // HttpServerRequest::WebSocketClose(_channel_id) => Ok(()),
     HttpServerRequest::Http(request) => {
       match request.method()?.as_str() {
         "GET" => handle_get(our, request, state),
@@ -68,6 +69,7 @@ fn handle_ui(our: &Address,
         }
       }
     }
+    _ => Ok(()),
   }
 }
 fn handle_get(our: &Address,
@@ -88,6 +90,7 @@ fn handle_get(our: &Address,
   match pat {
     "/change-key" => {
       let _ = state.change_key();
+      Ok(())
     }
     "/pubkey" => {
       println!("state {:?}", state);
@@ -96,11 +99,8 @@ fn handle_get(our: &Address,
       let hex_string = hex::encode(bytes);
       println!("pk {:?}", hex_string);
       println!("pubkey {}", hex_string);
-      let mut headers = HashMap::new();
-      headers.insert("Content-Type".to_string(), "application/json".to_string());
-      send_response(StatusCode::OK,
-                    Some(headers),
-                    serde_json::to_vec(&hex_string)?);
+      let res = UIRes::Ok(UIResInner::PubKey(hex_string));
+      send_json(res)
     }
     // quick logout
     // "/logout" => {
@@ -118,47 +118,14 @@ fn handle_get(our: &Address,
       db.write(statement2, vec![], None)?;
       state.reset();
       state.save()?;
-      let mut headers = HashMap::new();
-      headers.insert("Content-Type".to_string(), "application/json".to_string());
-      send_response(StatusCode::OK, Some(headers), serde_json::to_vec(&true)?);
+      send_json(UIRes::Ok(UIResInner::Ack))
     }
-    "/logged" => {
-      // Write schema if not written yet
-      // state.print_state();
-      db::check_schema(our)?;
-
-      // let dbres = db::find_keys(our);
-      let mut headers = HashMap::new();
-      headers.insert("Content-Type".to_string(), "application/json".to_string());
-      match state.active_fid {
-        Some(val) => {
-          send_response(StatusCode::OK, Some(headers), serde_json::to_vec(&val)?);
-        }
-        None => {
-          send_response(StatusCode::OK,
-                        Some(headers),
-                        serde_json::to_vec(&serde_json::Value::Null)?);
-        }
-      }
-      // println!("sql data {:?}", data)
-    }
-    // "/setup" => {
-    //   let boolean: bool = match db::write_db_schema(our) {
-    //     Ok(_) => true,
-    //     Err(_) => false,
-    //   };
-    //   let mut headers = HashMap::new();
-    //   headers.insert("Content-Type".to_string(), "application/json".to_string());
-    //   send_response(StatusCode::OK, Some(headers), serde_json::to_vec(&boolean)?);
-    // }
     "/set-active" => {
       let fid = qparams.get("fid").unwrap();
       let fidn = fid.parse::<u64>()?;
       state.set_active_fid(fidn);
       state.save()?;
-      let mut headers = HashMap::new();
-      headers.insert("Content-Type".to_string(), "application/json".to_string());
-      send_response(StatusCode::OK, Some(headers), serde_json::to_vec(&true)?);
+      send_json(UIRes::Ok(UIResInner::Ack))
     }
     "/save-account" => {
       let fid = qparams.get("fid").unwrap();
@@ -168,39 +135,48 @@ fn handle_get(our: &Address,
       //
       // let key = qparams.get("key").unwrap();
       // let writeDB = db::write_signing_key(our, &fidn, key.to_string());
-      let writeProf = db::write_db_profile(our, &fidn);
-      let mut headers = HashMap::new();
-      headers.insert("Content-Type".to_string(), "application/json".to_string());
-      send_response(StatusCode::OK, Some(headers), serde_json::to_vec(&true)?);
+      let _write_prof = db::write_db_profile(our, &fidn)?;
+      send_json(UIRes::Ok(UIResInner::Ack))
     }
     "/profile" => match state.active_fid {
-      None => {
-        send_json(UIRes::Err { error: "no active fid".to_string() });
-      }
+      None => send_json(UIRes::Err { error: "no active fid".to_string() }),
       Some(f) => {
         let prof = db::get_profile(our, f);
         match prof {
           Some(data) => {
             let res = UIRes::Ok(UIResInner::Profile(data));
-            send_json(res);
+            send_json(res)
           }
-          None => {
-            send_json(UIRes::Err { error: "no profile in db".to_string() });
-          }
+          None => send_json(UIRes::Err { error: "no profile in db".to_string() }),
         }
       }
     },
-    "/timeline" => match state.active_fid {
-      None => {
-        send_json(UIRes::Err { error: "no fid".to_string() });
+    "/timeline" => {
+      let cursors = qparams.get("cursor");
+      let cursor = match cursors {
+        Some(c) => {
+          let p = c.parse::<u64>();
+          if let Ok(pp) = p {
+            pp
+          } else {
+            0
+          }
+        }
+        None => 0,
+      };
+      match state.active_fid {
+        None => send_json(UIRes::Err { error: "no fid".to_string() }),
+        Some(f) => {
+          let casts = db::get_timeline3(our, f, cursor)?;
+          let cursor = match casts.last() {
+            None => 0,
+            Some(c) => c.cast.timestamp,
+          };
+          let res = UIRes::Ok(UIResInner::Timeline { cursor, casts });
+          send_json(res)
+        }
       }
-      Some(f) => {
-        let casts = db::get_timeline2(our, f)?;
-        let cursor = 0;
-        let res = UIRes::Ok(UIResInner::Timeline { cursor, casts });
-        send_json(res);
-      }
-    },
+    }
     // "/profile" => {
     //   let fid = qparams.get("fid").unwrap();
     //   let data = hub::fetch_userdata(fid)?;
@@ -212,15 +188,29 @@ fn handle_get(our: &Address,
       let fid = qparams.get("fid").unwrap();
       let fidn = fid.parse::<u64>()?;
       let ocursor = qparams.get("cursor").unwrap();
+      let cursor = ocursor.parse::<u64>()?;
       let replies = qparams.get("replies");
-      let casts = db::get_casts(our, fidn)?;
+      let is_replies = match replies {
+        None => false,
+        Some(s) => s.as_str() == "1",
+      };
+      let casts = db::get_casts(our, fidn, cursor, is_replies)?;
       let profile = db::get_profile(our, fidn);
-      let cursor = 0;
+      let cursor = match casts.last() {
+        None => 0,
+        Some(c) => c.cast.timestamp,
+      };
       let ures = UIResInner::Feed { fid: fidn,
                                     casts,
                                     cursor,
                                     profile };
-      send_json(UIRes::Ok(ures));
+      send_json(UIRes::Ok(ures))
+    }
+    "/userlinks" => {
+      let fid = qparams.get("fid").unwrap();
+      let fidn = fid.parse::<u64>()?;
+      let ures = db::get_fid_links(our, fidn)?;
+      send_json(UIRes::Ok(ures))
     }
     "/userreactions" => {
       let fid = qparams.get("fid").unwrap();
@@ -231,7 +221,7 @@ fn handle_get(our: &Address,
       let ures = UIResInner::Reactions { cursor,
                                          fid: fidn,
                                          reactions };
-      send_json(UIRes::Ok(ures));
+      send_json(UIRes::Ok(ures))
     }
     "/engagement" => {
       let fid = qparams.get("fid").unwrap();
@@ -239,13 +229,10 @@ fn handle_get(our: &Address,
       let rs = hub::fetch_reactions(fid, hash, None)?;
       let hres = serde_json::from_slice::<HubResponse>(&rs)?;
       let res = UIRes::Ok(UIResInner::Proxy(hres));
-      send_json(res);
+      send_json(res)
     }
-    _ => {}
+    _ => Ok(()),
   }
-
-  send_response(StatusCode::CREATED, None, vec![]);
-  Ok(())
 }
 
 fn send_json(res: UIRes) -> Result<()> {
@@ -394,7 +381,9 @@ fn handle_message(our: &Address, state: &mut sur::State) -> anyhow::Result<()> {
         match or {
           "build-timeline" => {
             let timeline_ok = hub::build_timeline(our, state);
-            timeline_timer();
+            if let Ok(_tlok) = timeline_ok {
+              timeline_timer(60000);
+            };
             println!("timeline saved? {:?}", timeline_ok);
             ()
           }
@@ -431,26 +420,26 @@ fn add_to_home() {
     .send()
     .unwrap();
 }
-fn timeline_timer() {
-  set_timer(60000, Some(serde_json::to_vec("build-timeline").unwrap()));
+fn timeline_timer(dur: u64) {
+  set_timer(dur, Some(serde_json::to_vec("build-timeline").unwrap()));
 }
 call_init!(init);
 fn init(our: Address) {
   println!("kinocast begin 2");
-  timeline_timer();
+  let start_db = check_schema(&our);
+  println!("db ok {:?}", start_db);
   // let mut channel_id = 0;
 
   add_to_home();
   let _ = db::open_db(&our);
   let mut state = sur::load_state();
-  let _ = state.save();
   println!("state {:?}", state);
+  timeline_timer(500);
   // Bind UI files to routes; index.html is bound to "/"
   serve_ui(&our, "ui", false, false, vec!["/", "/:fid"]).unwrap();
 
   // Bind HTTP path /messages
   bind_http_path("/api/change-key", true, false).unwrap();
-  bind_http_path("/api/logged", true, false).unwrap();
   // fetch ed25519 pubkey
   bind_http_path("/api/pubkey", true, false).unwrap();
   bind_http_path("/api/save-account", true, false).unwrap();
@@ -462,6 +451,7 @@ fn init(our: Address) {
   bind_http_path("/api/timeline", true, false).unwrap();
   bind_http_path("/api/userfeed", true, false).unwrap();
   bind_http_path("/api/userlikes", true, false).unwrap();
+  bind_http_path("/api/userlinks", true, false).unwrap();
   bind_http_path("/api/engagement", true, false).unwrap();
   //
   bind_http_path("/api/logout", true, false).unwrap();

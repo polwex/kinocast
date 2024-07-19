@@ -2,8 +2,7 @@ import { create } from "zustand";
 import { UserProfile } from "../types/farcaster";
 import { ReactNode } from "react";
 import { castsByFid, linksByFid, linksByTargetFid } from "../fetch/hub";
-import { checkNew, id_login, logout, readProfile } from "../fetch/kinode";
-import { userCasts } from "../fetch/kinohub";
+import { id_login, logout, readProfile } from "../fetch/kinode";
 type ModalOpts = {
   closable?: boolean;
   width?: string;
@@ -62,7 +61,6 @@ const useGlobalState = create<GlobalState>((set, get) => ({
   //
   init: async () => {
     // await debug()
-    await checkNew();
     const prof = await readProfile();
     console.log(prof, "prof");
     if ("ok" in prof) set({ prof: prof.ok.profile });
